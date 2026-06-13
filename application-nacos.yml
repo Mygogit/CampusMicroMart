@@ -1,0 +1,51 @@
+# ============================================================
+# Nacos 环境配置文件
+# 使用说明：
+#   1. 确保 Nacos Server 已启动（默认地址 localhost:8848）
+#   2. 启动应用时激活此配置：
+#      java -jar xxx.jar --spring.profiles.active=nacos
+#      或在 application.yml 中设置 spring.profiles.active: nacos
+#   3. 此文件与各服务的 application.yml 合并使用
+# ============================================================
+
+spring:
+  cloud:
+    nacos:
+      # Nacos 服务发现配置
+      discovery:
+        enabled: true
+        server-addr: localhost:8848
+        namespace: ${NACOS_NAMESPACE:public}
+        group: DEFAULT_GROUP
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        register-enabled: true
+        ephemeral: true
+        heart-beat-interval: 5000
+        heart-beat-timeout: 15000
+        ip-delete-timeout: 30000
+        metadata:
+          app.version: 1.0.0
+
+      # Nacos 配置中心配置
+      config:
+        enabled: true
+        server-addr: localhost:8848
+        namespace: ${NACOS_NAMESPACE:public}
+        group: DEFAULT_GROUP
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        file-extension: yml
+        refresh-enabled: true
+        import-check:
+          enabled: true
+        shared-configs:
+          - data-id: campus-common.yml
+            group: DEFAULT_GROUP
+            refresh: true
+
+# Nacos 配置中心相关日志级别
+logging:
+  level:
+    com.alibaba.nacos: WARN
+    com.alibaba.nacos.client.config: WARN

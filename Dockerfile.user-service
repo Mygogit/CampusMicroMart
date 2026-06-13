@@ -1,0 +1,24 @@
+# ============================================================
+# user-service Dockerfile (multi-stage build)
+# 构建：docker build -f Dockerfile.user-service -t campus-user-service:latest .
+# 运行：docker run -p 8084:8084 --name campus-user-service campus-user-service:latest
+# ============================================================
+
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY campus-common/pom.xml campus-common/
+COPY user-service/pom.xml user-service/
+RUN mvn dependency:go-offline -pl user-service -am -B
+
+COPY campus-common/src campus-common/src
+COPY user-service/src user-service/src
+RUN mvn package -pl user-service -am -DskipTests -B
+
+FROM eclipse-temurin:17-jre-alpine
+RUN addgroup --system campus && adduser --system campus --ingroup campus
+USER campus:campus
+WORKDIR /app
+COPY --from=build /app/user-service/target/*.jar app.jar
+EXPOSE 8084
+ENTRYPOINT ["java", "-jar", "app.jar"]

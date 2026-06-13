@@ -1,0 +1,151 @@
+﻿
+========================================================
+  [1] System Environment
+========================================================
+  [OK]   OS  ->  Microsoft Windows 11 家庭版 中文版, RAM: 16MB
+  [OK]   Java Runtime  ->  java version "24.0.1" 2025-04-15
+  [OK]   MySQL Client  ->  E:\数据\CampusMicroMart\dist-standalone\mariadb\bin\mysql.exe
+
+========================================================
+  [2] Process Status
+========================================================
+  [OK]   MySQL/MariaDB  ->  1 proc(s): PID=6756
+  [WARN] Redis  ->  NOT RUNNING
+  [OK]   Java (Backend)  ->  2 proc(s): PID=32020, PID=33324
+  [OK]   Node.js (Frontend Dev)  ->  2 proc(s): PID=17104, PID=37712
+  [WARN] Nginx (Frontend Prod)  ->  NOT RUNNING
+  [FAIL] Embedded MariaDB  ->  mariadbd not running
+
+========================================================
+  [3] Port Status
+========================================================
+
+========================================================
+    -- Service Ports --
+========================================================
+  [WARN] Gateway:8080  ->  not listening
+  [WARN] Product:8081  ->  not listening
+  [WARN] Order:8083  ->  not listening
+  [OK]   User:8084  ->  PID=33324(java)
+  [WARN] Payment:8085  ->  not listening
+  [WARN] Vite:5173  ->  not listening
+  [WARN] Nginx:80  ->  not listening
+
+========================================================
+    -- Infrastructure Ports --
+========================================================
+  [OK]   MySQL:3306  ->  PID=6756(mysqld); PID=6756(mysqld)
+  [WARN] Redis:6379  ->  not listening
+  [WARN] Nacos:8848  ->  not listening
+  [WARN] Sentinel:8858  ->  not listening
+  [WARN] RocketMQ:9876  ->  not listening
+
+========================================================
+  [4] Database Connectivity
+========================================================
+  [OK]   MySQL TCP 127.0.0.1:3306  ->  reachable
+  [FAIL] DB Login  ->  auth failed: ERROR 1045 (28000): Access denied for user 'root'@'localhost' (using password: YES)
+  [OK]   Alt Password  ->  alt password 'root' works
+
+========================================================
+    -- Data Directory Integrity --
+========================================================
+  [FAIL] ibdata1 (core data)  ->  MISSING! Re-init required
+  [FAIL] mysql system db  ->  MISSING! Incomplete init
+  [WARN] .initialized marker  ->  exists (may hide init failures!)
+  [FAIL] *** ACTION ***  ->  Delete E:\数据\CampusMicroMart\dist-standalone\data\mysql directory then restart!
+
+========================================================
+  [5] Middleware Connectivity
+========================================================
+  [WARN] Redis (6379)  ->  not reachable
+  [WARN] Nacos (8848)  ->  not reachable
+  [WARN] Seata (7091)  ->  not reachable
+  [WARN] RocketMQ (9876)  ->  not reachable
+  [WARN] Sentinel (8858)  ->  not reachable
+
+========================================================
+  [6] Microservice Health (Actuator)
+========================================================
+  [FAIL] Gateway  ->  HTTP 0: Unable to connect to the remote server
+  [FAIL] Product Service  ->  HTTP 0: Unable to connect to the remote server
+  [FAIL] Order Service  ->  HTTP 0: Unable to connect to the remote server
+  [FAIL] User Service  ->  HTTP 503: The remote server returned an error: (503) Server Unavailable.
+  [FAIL] Payment Service  ->  HTTP 0: Unable to connect to the remote server
+  [FAIL] Gateway API Chain  ->  Unable to connect to the remote server
+
+========================================================
+  [7] Frontend
+========================================================
+  [WARN] Vite Dev (5173)  ->  not running
+  [WARN] Nginx (80)  ->  not running
+
+========================================================
+  [8] Deployment Integrity (JARs)
+========================================================
+  [FAIL] campus-gateway.jar  ->  MISSING!
+  [FAIL] campus-user-service.jar  ->  MISSING!
+  [FAIL] campus-product-service.jar  ->  MISSING!
+  [FAIL] campus-order-service.jar  ->  MISSING!
+  [FAIL] campus-payment-service.jar  ->  MISSING!
+  [OK]   init.sql  ->  exists
+  [OK]   Embedded MariaDB  ->  exists
+
+========================================================
+  [9] Error Log Analysis
+========================================================
+  [FAIL] frontend-err.log  ->  errors detected
+  [FAIL]   ->  ->  ԭ��: java.lang.ClassNotFoundException: com.campus.gateway.FrontendServer
+  [FAIL] gateway.log  ->  errors detected
+  [FAIL]   ->  ->  2026-06-08 06:10:27.794 [OkHttp http://localhost:4318/...] [] [] ERROR i.o.e.internal.http.HttpExporter - Failed to export spans. The request could not be executed. Full error message: Failed to conne...
+  [FAIL]   ->  ->  java.net.ConnectException: Failed to connect to localhost/[0:0:0:0:0:0:0:1]:4318
+  [FAIL]   ->  ->  Suppressed: java.net.ConnectException: Failed to connect to localhost/127.0.0.1:4318
+  [FAIL]   ->  ->  Caused by: java.net.ConnectException: Connection refused: getsockopt
+  [FAIL]   ->  ->  Caused by: java.net.ConnectException: Connection refused: getsockopt
+  [FAIL] seata-server.log  ->  errors detected
+  [FAIL]   ->  ->  01:22:17.762  WARN --- [                     main] [letWebServerApplicationContext] [             refresh]  [] : Exception encountered during context initialization - cancelling refresh attempt: org.s...
+  [FAIL]   ->  ->  Error starting ApplicationContext. To display the conditions report re-run your application with 'debug' enabled.
+  [FAIL]   ->  ->  01:22:18.075 ERROR --- [                     main] [amework.boot.SpringApplication] [       reportFailure]  [] : Application run failed
+  [FAIL]   ->  ->  org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'clusterController': Lookup method resolution failed; nested exception is java.lang.IllegalStateException: Failed...
+  [FAIL]   ->  ->  Caused by: java.lang.IllegalStateException: Failed to introspect Class [io.seata.server.controller.ClusterController] from ClassLoader [org.springframework.boot.loader.LaunchedURLClassLoader@dcf3e99]
+  [FAIL] gateway.log  ->  errors detected
+  [FAIL]   ->  ->  2026-06-08 21:53:57.609 [OkHttp http://localhost:4318/...] [] [] ERROR i.o.e.internal.http.HttpExporter - Failed to export spans. The request could not be executed. Full error message: Failed to conne...
+  [FAIL]   ->  ->  java.net.ConnectException: Failed to connect to localhost/[0:0:0:0:0:0:0:1]:4318
+  [FAIL]   ->  ->  Suppressed: java.net.ConnectException: Failed to connect to localhost/127.0.0.1:4318
+  [FAIL]   ->  ->  Caused by: java.net.ConnectException: Connection refused: getsockopt
+  [FAIL]   ->  ->  Caused by: java.net.ConnectException: Connection refused: getsockopt
+  [FAIL] payment-service.log  ->  errors detected
+  [FAIL]   ->  ->  2026-06-08 20:47:41.007 [main] [] [] ERROR i.s.c.r.n.NettyClientChannelManager - 0304 register RM failed.
+  [FAIL]   ->  ->  io.seata.common.exception.FrameworkException: can not connect to services-server.
+  [FAIL]   ->  ->  Caused by: io.seata.common.exception.FrameworkException: connect failed, can not connect to services-server.
+  [FAIL]   ->  ->  Caused by: io.netty.channel.AbstractChannel$AnnotatedConnectException: Connection refused: getsockopt: /127.0.0.1:8091
+  [FAIL]   ->  ->  Caused by: java.net.ConnectException: Connection refused: getsockopt
+  [FAIL] product-service.log  ->  errors detected
+  [FAIL]   ->  ->  java : java.util.logging.ErrorManager: 2
+  [FAIL]   ->  ->  + CategoryInfo          : NotSpecified: (java.util.logging.ErrorManager: 2
+  [FAIL]   ->  ->  + FullyQualifiedErrorId : NativeCommandError
+  [FAIL]   ->  ->  java.io.IOException: 拒绝访问。
+  [FAIL]   ->  ->  java.util.logging.ErrorManager: 2
+  [FAIL] user-service.log  ->  errors detected
+  [FAIL]   ->  ->  java : java.util.logging.ErrorManager: 2
+  [FAIL]   ->  ->  + CategoryInfo          : NotSpecified: (java.util.logging.ErrorManager: 2
+  [FAIL]   ->  ->  + FullyQualifiedErrorId : NativeCommandError
+  [FAIL]   ->  ->  java.io.IOException: 拒绝访问。
+  [FAIL]   ->  ->  java.util.logging.ErrorManager: 2
+
+========================================================
+  [10] DIAGNOSTIC SUMMARY
+========================================================
+
+   Checks run:  86  |  [OK]: 12  |  [FAIL]: 54  |  [WARN]: 20
+
+  Verdict:
+54 failure(s) detected. Common fixes:
+  1. DB missing/not created -> Delete data dir then restart
+  2. Port not listening -> Check if service process started (see .log)
+  3. Actuator unreachable -> Check service log for exception stacktrace
+  4. Auth failed -> Confirm password: 'campus123'(standalone) vs 'root'(dev)
+
+  Report time: 2026-06-10 23:46:07
+  Mode: standalone
+

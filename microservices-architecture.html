@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>微服务系统架构图 — Excalidraw 手绘风格</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: #fafafa;
+    font-family: "Virgil", "Segoe UI", system-ui, sans-serif;
+    padding: 20px;
+  }
+
+  .diagram-wrapper {
+    background: #fff;
+    border: 2px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    max-width: 1180px;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  svg { display: block; width: 100%; height: auto; cursor: default; }
+
+  .conn    { transition: opacity 0.35s ease, stroke-width 0.35s ease; }
+  .sketch  { transition: opacity 0.35s ease; }
+  .node-group { transition: opacity 0.35s ease; cursor: pointer; }
+  .node-group text { pointer-events: none; user-select: none; }
+  .node-group rect { transition: filter 0.3s ease, stroke-width 0.3s ease; }
+
+  .dimmed         { opacity: 0.15 !important; }
+  .conn-dimmed    { opacity: 0.12 !important; }
+  .highlight-conn,.highlight-sketch  { opacity: 1 !important; }
+  .highlight-conn { stroke-width: 3.2 !important; stroke: #1a1a1a !important; filter: none !important; }
+  .highlight-conn[data-from] { marker-end: url(#arr-hl); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.45; }
+    50%      { opacity: 1; }
+  }
+
+  h1 {
+    font-size: 20px; font-weight: 500; color: #1e1e1e;
+    text-align: center; margin-bottom: 4px; letter-spacing: -0.3px;
+  }
+  .subtitle {
+    font-size: 13px; color: #888; text-align: center;
+    margin-bottom: 20px; letter-spacing: 0.5px;
+  }
+  .tip {
+    font-size: 11px; color: #bbb; text-align: center;
+    margin-top: 8px; animation: pulse 2.5s ease-in-out infinite;
+  }
+</style>
+</head>
+<body>
+<div class="diagram-wrapper">
+<h1>微服务系统架构图</h1>
+<p class="subtitle">Campus MicroMart — 手绘风格 · 悬停节点高亮连接</p>
+
+<svg viewBox="0 0 1120 600" xmlns="http://www.w3.org/2000/svg">
+<defs>
+
+  <pattern id="dot-grid" width="16" height="16" patternUnits="userSpaceOnUse">
+    <circle cx="8" cy="8" r="0.6" fill="#e2e2e2"/>
+  </pattern>
+
+  <filter id="handdrawn" x="-8%" y="-8%" width="116%" height="116%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.044" numOctaves="4" result="noise" seed="3"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+
+  <filter id="handdrawn-light" x="-6%" y="-6%" width="112%" height="112%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" result="noise" seed="7"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+
+  <filter id="rough-text" x="-4%" y="-4%" width="108%" height="108%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" result="noise" seed="13"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="0.8" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+
+  <filter id="conn-filter" x="-8%" y="-8%" width="116%" height="116%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" result="noise" seed="5"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+
+  <marker id="arr-blue" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 2L10 6L2 10" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arr-green" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 2L10 6L2 10" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arr-orange" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 2L10 6L2 10" fill="none" stroke="#EA580C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+  <marker id="arr-hl" viewBox="0 0 12 12" refX="9" refY="6" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M2 2L10 6L2 10" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </marker>
+</defs>
+
+<rect width="1120" height="600" fill="#fff"/>
+<rect width="1120" height="600" fill="url(#dot-grid)"/>
+
+<!-- ===== Layer Bands ===== -->
+<g>
+  <rect x="22" y="22" width="1076" height="106" rx="10" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1" stroke-dasharray="7,5" opacity="0.65"/>
+  <text x="46" y="44" font-size="12" fill="#3B82F6" font-weight="500" opacity="0.8">API Gateway  Layer</text>
+</g>
+<g>
+  <rect x="22" y="142" width="1076" height="146" rx="10" fill="#F0FDF4" stroke="#BBF7D0" stroke-width="1" stroke-dasharray="7,5" opacity="0.65"/>
+  <text x="46" y="164" font-size="12" fill="#16A34A" font-weight="500" opacity="0.8">Business Service  Layer</text>
+</g>
+<g>
+  <rect x="22" y="304" width="1076" height="122" rx="10" fill="#FFF7ED" stroke="#FED7AA" stroke-width="1" stroke-dasharray="7,5" opacity="0.65"/>
+  <text x="46" y="326" font-size="12" fill="#EA580C" font-weight="500" opacity="0.8">Infrastructure  Layer</text>
+</g>
+
+
+<!-- ===== Connections (arrows) ===== -->
+<g filter="url(#conn-filter)">
+
+  <!-- Gateway → Auth -->
+  <path class="sketch" d="M560 108 C560 140 158 140 158 170"
+    fill="none" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <path class="conn" data-from="gateway" data-to="auth"
+    d="M560 108 C560 142 158 142 158 170"
+    fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-blue)"/>
+
+  <!-- Gateway → User -->
+  <path class="sketch" d="M560 108 C560 140 348 140 348 170"
+    fill="none" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <path class="conn" data-from="gateway" data-to="user"
+    d="M560 108 C560 142 348 142 348 170"
+    fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-blue)"/>
+
+  <!-- Gateway → Order -->
+  <path class="sketch" d="M560 108 C560 140 538 140 538 170"
+    fill="none" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <path class="conn" data-from="gateway" data-to="order"
+    d="M560 108 C560 142 538 142 538 170"
+    fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-blue)"/>
+
+  <!-- Gateway → Payment -->
+  <path class="sketch" d="M560 108 C560 140 728 140 728 170"
+    fill="none" stroke="#2563EB" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <path class="conn" data-from="gateway" data-to="payment"
+    d="M560 108 C560 142 728 142 728 170"
+    fill="none" stroke="#2563EB" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-blue)"/>
+
+  <!-- Auth → DB -->
+  <path class="sketch" d="M158 230 C158 270 668 270 668 324"
+    fill="none" stroke="#16A34A" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <path class="conn" data-from="auth" data-to="db"
+    d="M158 230 C158 272 668 272 668 324"
+    fill="none" stroke="#16A34A" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-green)"/>
+
+  <!-- User → DB -->
+  <path class="sketch" d="M348 230 C348 270 728 270 728 324"
+    fill="none" stroke="#16A34A" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <path class="conn" data-from="user" data-to="db"
+    d="M348 230 C348 272 728 272 728 324"
+    fill="none" stroke="#16A34A" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-green)"/>
+
+  <!-- Order → DB -->
+  <path class="sketch" d="M538 230 C538 270 790 270 790 324"
+    fill="none" stroke="#16A34A" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <path class="conn" data-from="order" data-to="db"
+    d="M538 230 C538 272 790 272 790 324"
+    fill="none" stroke="#16A34A" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-green)"/>
+
+  <!-- Order → Payment -->
+  <path class="sketch" d="M626 200 H638"
+    fill="none" stroke="#16A34A" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <path class="conn" data-from="order" data-to="payment"
+    d="M626 200 H638"
+    fill="none" stroke="#16A34A" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-green)"/>
+
+  <!-- Payment → Kafka -->
+  <path class="sketch" d="M728 230 C728 280 328 280 328 324"
+    fill="none" stroke="#16A34A" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <path class="conn" data-from="payment" data-to="kafka"
+    d="M728 230 C728 284 328 284 328 324"
+    fill="none" stroke="#16A34A" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-green)"/>
+
+  <!-- Kafka → Notification -->
+  <path class="sketch" d="M398 356 H478"
+    fill="none" stroke="#EA580C" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <path class="conn" data-from="kafka" data-to="notification"
+    d="M398 356 H478"
+    fill="none" stroke="#EA580C" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-orange)"/>
+
+  <!-- Notification → DB -->
+  <path class="sketch" d="M573 391 C573 358 850 358 850 330"
+    fill="none" stroke="#16A34A" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <path class="conn" data-from="notification" data-to="db"
+    d="M573 391 C573 358 850 358 850 330"
+    fill="none" stroke="#16A34A" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-green)"/>
+
+  <!-- Payment → DB -->
+  <path class="sketch" d="M814 230 L814 323"
+    fill="none" stroke="#16A34A" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <path class="conn" data-from="payment" data-to="db"
+    d="M814 230 L814 323"
+    fill="none" stroke="#16A34A" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arr-green)"/>
+
+</g>
+
+
+<!-- ===== Service nodes ===== -->
+
+<!-- API Gateway -->
+<g class="node-group" data-id="gateway" data-layer="gateway">
+  <rect x="450" y="50" width="220" height="58" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.8" filter="url(#handdrawn)"/>
+  <text x="560" y="74" text-anchor="middle" font-size="15" font-weight="500" fill="#1E40AF" filter="url(#rough-text)">API Gateway</text>
+  <text x="560" y="93" text-anchor="middle" font-size="11" fill="#3B82F6" filter="url(#rough-text)">路由 · 限流 · 鉴权</text>
+</g>
+
+<!-- Auth Service -->
+<g class="node-group" data-id="auth" data-layer="business">
+  <rect x="72" y="175" width="172" height="55" rx="8" fill="#DCFCE7" stroke="#16A34A" stroke-width="2.8" filter="url(#handdrawn)"/>
+  <text x="158" y="198" text-anchor="middle" font-size="14" font-weight="500" fill="#166534" filter="url(#rough-text)">Auth Service</text>
+  <text x="158" y="216" text-anchor="middle" font-size="10.5" fill="#22C55E" filter="url(#rough-text)">JWT / OAuth2</text>
+</g>
+
+<!-- User Service -->
+<g class="node-group" data-id="user" data-layer="business">
+  <rect x="262" y="175" width="172" height="55" rx="8" fill="#DCFCE7" stroke="#16A34A" stroke-width="2.8" filter="url(#handdrawn)"/>
+  <text x="348" y="198" text-anchor="middle" font-size="14" font-weight="500" fill="#166534" filter="url(#rough-text)">User Service</text>
+  <text x="348" y="216" text-anchor="middle" font-size="10.5" fill="#22C55E" filter="url(#rough-text)">Profile &amp; Account</text>
+</g>
+
+<!-- Order Service -->
+<g class="node-group" data-id="order" data-layer="business">
+  <rect x="452" y="175" width="172" height="55" rx="8" fill="#DCFCE7" stroke="#16A34A" stroke-width="2.8" filter="url(#handdrawn)"/>
+  <text x="538" y="198" text-anchor="middle" font-size="14" font-weight="500" fill="#166534" filter="url(#rough-text)">Order Service</text>
+  <text x="538" y="216" text-anchor="middle" font-size="10.5" fill="#22C55E" filter="url(#rough-text)">Seata TCC</text>
+</g>
+
+<!-- Payment Service -->
+<g class="node-group" data-id="payment" data-layer="business">
+  <rect x="642" y="175" width="172" height="55" rx="8" fill="#DCFCE7" stroke="#16A34A" stroke-width="2.8" filter="url(#handdrawn)"/>
+  <text x="728" y="198" text-anchor="middle" font-size="14" font-weight="500" fill="#166534" filter="url(#rough-text)">Payment Service</text>
+  <text x="728" y="216" text-anchor="middle" font-size="10.5" fill="#22C55E" filter="url(#rough-text)">AliPay / WeChat</text>
+</g>
+
+<!-- Kafka -->
+<g class="node-group" data-id="kafka" data-layer="infrastructure">
+  <rect x="178" y="326" width="220" height="60" rx="8" fill="#FFEDD5" stroke="#EA580C" stroke-width="2.8" filter="url(#handdrawn)"/>
+  <text x="288" y="350" text-anchor="middle" font-size="15" font-weight="500" fill="#9A3412" filter="url(#rough-text)">Apache Kafka</text>
+  <text x="288" y="370" text-anchor="middle" font-size="10.5" fill="#F97316" filter="url(#rough-text)">Event Bus / 异步解耦</text>
+</g>
+
+<!-- Notification Service -->
+<g class="node-group" data-id="notification" data-layer="business">
+  <rect x="478" y="336" width="190" height="55" rx="8" fill="#DCFCE7" stroke="#16A34A" stroke-width="2.8" filter="url(#handdrawn)"/>
+  <text x="573" y="359" text-anchor="middle" font-size="14" font-weight="500" fill="#166534" filter="url(#rough-text)">Notification Svc</text>
+  <text x="573" y="377" text-anchor="middle" font-size="10.5" fill="#22C55E" filter="url(#rough-text)">Email / SMS / Push</text>
+</g>
+
+<!-- PostgreSQL -->
+<g class="node-group" data-id="db" data-layer="infrastructure">
+  <rect x="668" y="326" width="380" height="60" rx="8" fill="#FFEDD5" stroke="#EA580C" stroke-width="2.8" filter="url(#handdrawn)"/>
+  <text x="858" y="350" text-anchor="middle" font-size="15" font-weight="500" fill="#9A3412" filter="url(#rough-text)">PostgreSQL  Cluster</text>
+  <text x="858" y="370" text-anchor="middle" font-size="10.5" fill="#F97316" filter="url(#rough-text)">Shared Database</text>
+</g>
+
+
+<!-- ===== Legend ===== -->
+<g id="legend" transform="translate(28, 470)">
+  <rect x="0" y="0" width="310" height="116" rx="10" fill="#FAFAFA" stroke="#E5E5E5" stroke-width="1.3" filter="url(#handdrawn-light)"/>
+
+  <text x="155" y="24" text-anchor="middle" font-size="13" font-weight="500" fill="#333">————  颜色图例  ————</text>
+
+  <rect x="20" y="38" width="34" height="16" rx="4" fill="#DBEAFE" stroke="#2563EB" stroke-width="2.2" filter="url(#handdrawn-light)"/>
+  <text x="66" y="50" font-size="12" fill="#1E40AF">API Gateway  (网关层)</text>
+
+  <rect x="20" y="62" width="34" height="16" rx="4" fill="#DCFCE7" stroke="#16A34A" stroke-width="2.2" filter="url(#handdrawn-light)"/>
+  <text x="66" y="74" font-size="12" fill="#166534">Business Service  (业务层)</text>
+
+  <rect x="20" y="86" width="34" height="16" rx="4" fill="#FFEDD5" stroke="#EA580C" stroke-width="2.2" filter="url(#handdrawn-light)"/>
+  <text x="66" y="98" font-size="12" fill="#9A3412">Infrastructure  (基础层)</text>
+</g>
+
+<g transform="translate(380, 470)">
+  <rect x="0" y="0" width="280" height="72" rx="10" fill="#FAFAFA" stroke="#E5E5E5" stroke-width="1.3" filter="url(#handdrawn-light)"/>
+  <text x="140" y="22" text-anchor="middle" font-size="13" font-weight="500" fill="#333">设计要点</text>
+  <text x="140" y="42" text-anchor="middle" font-size="11.5" fill="#777">Gateway 统一入口 · JWT 鉴权转发</text>
+  <text x="140" y="58" text-anchor="middle" font-size="11.5" fill="#777">Kafka 异步解耦 · 支付 → 通知</text>
+</g>
+
+<text x="560" y="510" text-anchor="middle" font-size="11" fill="#bbb" class="tip">↑  悬停任意服务节点查看其所有连接  ↑</text>
+
+</svg>
+</div>
+
+<script>
+(function() {
+  var nodes = document.querySelectorAll('.node-group');
+  var conns = document.querySelectorAll('.conn[data-from]');
+  var sketchLines = document.querySelectorAll('.sketch');
+
+  function connectedIds(nodeId) {
+    var ids = {};
+    ids[nodeId] = true;
+    conns.forEach(function(c) {
+      var f = c.getAttribute('data-from');
+      var t = c.getAttribute('data-to');
+      if (f === nodeId) ids[t] = true;
+      if (t === nodeId) ids[f] = true;
+    });
+    return ids;
+  }
+
+  function highlight(nodeId) {
+    var ids = connectedIds(nodeId);
+
+    nodes.forEach(function(n) {
+      if (!ids[n.getAttribute('data-id')]) n.classList.add('dimmed');
+    });
+
+    conns.forEach(function(c) {
+      var f = c.getAttribute('data-from');
+      var t = c.getAttribute('data-to');
+      if (f === nodeId || t === nodeId) {
+        c.classList.add('highlight-conn');
+      } else {
+        c.classList.add('conn-dimmed');
+      }
+    });
+
+    sketchLines.forEach(function(s) {
+      var next = s.nextElementSibling;
+      if (next && next.classList.contains('conn') && next.hasAttribute('data-from')) {
+        if (next.classList.contains('highlight-conn')) {
+          s.classList.add('highlight-sketch');
+        } else {
+          s.classList.add('conn-dimmed');
+        }
+      }
+    });
+  }
+
+  function clearAll() {
+    nodes.forEach(function(n) { n.classList.remove('dimmed'); });
+    conns.forEach(function(c) { c.classList.remove('conn-dimmed','highlight-conn'); });
+    sketchLines.forEach(function(s) { s.classList.remove('conn-dimmed','highlight-sketch'); });
+  }
+
+  nodes.forEach(function(node) {
+    node.addEventListener('mouseenter', function() {
+      highlight(node.getAttribute('data-id'));
+    });
+    node.addEventListener('mouseleave', clearAll);
+  });
+})();
+</script>
+</body>
+</html>

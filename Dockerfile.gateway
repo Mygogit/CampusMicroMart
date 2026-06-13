@@ -1,0 +1,24 @@
+# ============================================================
+# campus-gateway Dockerfile (multi-stage build)
+# 构建：docker build -f Dockerfile.gateway -t campus-gateway:latest .
+# 运行：docker run -p 8080:8080 --name campus-gateway campus-gateway:latest
+# ============================================================
+
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY campus-common/pom.xml campus-common/
+COPY campus-gateway/pom.xml campus-gateway/
+RUN mvn dependency:go-offline -pl campus-gateway -am -B
+
+COPY campus-common/src campus-common/src
+COPY campus-gateway/src campus-gateway/src
+RUN mvn package -pl campus-gateway -am -DskipTests -B
+
+FROM eclipse-temurin:17-jre-alpine
+RUN addgroup --system campus && adduser --system campus --ingroup campus
+USER campus:campus
+WORKDIR /app
+COPY --from=build /app/campus-gateway/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

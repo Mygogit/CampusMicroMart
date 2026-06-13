@@ -1,0 +1,1 @@
+import{a as e}from"./index-BHqbSxNi.js";const a={list(){return e.get("/category/list")},create(t){return e.post("/category",t)},update(t){return e.put("/category",t)},delete(t){return e.delete(`/category/${t}`)}};export{a as c};

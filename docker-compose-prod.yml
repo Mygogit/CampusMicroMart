@@ -1,0 +1,234 @@
+# ============================================================
+# 校园二手交易平台 - 生产部署 Docker Compose
+# 使用: docker compose -f docker-compose-prod.yml up -d
+# ============================================================
+version: '3.8'
+
+services:
+  # ======================== 基础设施 ========================
+  mysql:
+    image: mysql:8.0
+    container_name: campus-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./sql/init_admin.sql:/docker-entrypoint-initdb.d/init_admin.sql
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - campus-net
+
+  redis:
+    image: redis:7.0
+    container_name: campus-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    command: redis-server --maxmemory 100mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - campus-net
+
+  # ======================== 业务服务 ========================
+  user-service:
+    image: user-service:latest
+    container_name: campus-user
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/campus_user?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8
+      SPRING_REDIS_HOST: redis
+      # JVM 内存限制
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/user-service-oom.hprof"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8084/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - campus-net
+
+  product-service:
+    image: product-service:latest
+    container_name: campus-product
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/campus_product?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8
+      SPRING_REDIS_HOST: redis
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/product-service-oom.hprof"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8081/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - campus-net
+
+  order-service:
+    image: order-service:latest
+    container_name: campus-order
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/campus_order?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8
+      SPRING_REDIS_HOST: redis
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/order-service-oom.hprof"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8083/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - campus-net
+
+  payment-service:
+    image: payment-service:latest
+    container_name: campus-payment
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/campus_payment?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8
+      SPRING_REDIS_HOST: redis
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp/payment-service-oom.hprof"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8085/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - campus-net
+
+  gateway:
+    image: campus-gateway:latest
+    container_name: campus-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_REDIS_HOST: redis
+      JAVA_TOOL_OPTIONS: "-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+    networks:
+      - campus-net
+
+  # ======================== 前端 (Nginx) ========================
+  frontend:
+    image: nginx:alpine
+    container_name: campus-frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./campus-frontend/dist:/usr/share/nginx/html:ro
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - gateway
+    networks:
+      - campus-net
+
+  # ======================== 可观测性 (可选) ========================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: campus-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - campus-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: campus-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - campus-net
+
+networks:
+  campus-net:
+    driver: bridge

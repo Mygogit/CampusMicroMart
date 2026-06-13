@@ -1,0 +1,139 @@
+version: '3.8'
+
+services:
+  nacos:
+    image: nacos/nacos-server:v2.3.1
+    container_name: campus-nacos
+    environment:
+      - MODE=standalone
+      - SPRING_DATASOURCE_PLATFORM=mysql
+      - MYSQL_SERVICE_HOST=172.23.224.1
+      - MYSQL_SERVICE_PORT=3306
+      - MYSQL_SERVICE_DB_NAME=nacos_config
+      - MYSQL_SERVICE_USER=root
+      - MYSQL_SERVICE_PASSWORD=root
+    volumes:
+      - ./nacos/logs:/home/nacos/logs
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    networks:
+      - campus-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: campus-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=nacos_config
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - campus-network
+
+  redis:
+    image: redis:7.0
+    container_name: campus-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis/data:/data
+    networks:
+      - campus-network
+
+  sentinel-dashboard:
+    image: bladex/sentinel-dashboard:latest
+    container_name: campus-sentinel
+    ports:
+      - "8858:8858"
+    networks:
+      - campus-network
+
+  seata-server:
+    image: seataio/seata-server:2.0.0
+    container_name: campus-seata
+    ports:
+      - "7091:7091"
+      - "8091:8091"
+    environment:
+      - SEATA_PORT=8091
+      - SEATA_IP=seata-server
+      - STORE_MODE=db
+      - SEATA_STORE_DB_URL=jdbc:mysql://localhost:3306/seata?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8
+      - SEATA_STORE_DB_USER=root
+      - SEATA_STORE_DB_PASSWORD=root
+    depends_on:
+      - mysql
+      - nacos
+    networks:
+      - campus-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: campus-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - campus-network
+
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.1.4
+    container_name: campus-rocketmq-namesrv
+    environment:
+      - JAVA_OPT_EXT=-server -Xms256m -Xmx256m
+    command: sh mqnamesrv
+    ports:
+      - "9876:9876"
+    networks:
+      - campus-network
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.1.4
+    container_name: campus-rocketmq-broker
+    environment:
+      - JAVA_OPT_EXT=-server -Xms512m -Xmx512m
+      - NAMESRV_ADDR=rocketmq-namesrv:9876
+    command: sh mqbroker -c /home/rocketmq/rocketmq-5.1.4/conf/broker.conf
+    ports:
+      - "10909:10909"
+      - "10911:10911"
+    volumes:
+      - ./rocketmq/broker.conf:/home/rocketmq/rocketmq-5.1.4/conf/broker.conf
+    depends_on:
+      - rocketmq-namesrv
+    networks:
+      - campus-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: campus-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - campus-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: campus-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - campus-network
+
+networks:
+  campus-network:
+    driver: bridge

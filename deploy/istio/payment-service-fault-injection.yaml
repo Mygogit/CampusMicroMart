@@ -1,0 +1,34 @@
+# Payment Service 故障注入配置
+# 注入 5 秒延迟，模拟支付服务故障用于 SLO 实验
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: payment-service-fault
+spec:
+  hosts:
+    - payment-service
+  http:
+    - fault:
+        delay:
+          percentage:
+            value: 30
+          fixedDelay: 5s
+        abort:
+          percentage:
+            value: 10
+          httpStatus: 500
+      route:
+        - destination:
+            host: payment-service
+            subset: stable
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: payment-service-fault
+spec:
+  host: payment-service
+  subsets:
+    - name: stable
+      labels:
+        version: stable

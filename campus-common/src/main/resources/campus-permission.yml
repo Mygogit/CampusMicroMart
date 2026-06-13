@@ -1,0 +1,61 @@
+permissions:
+  - path: /user/login
+    method: POST
+    permitAll: true
+  - path: /user/register
+    method: POST
+    permitAll: true
+  - path: /product/deduct
+    method: POST
+    permitAll: true
+  - path: /product/rollback
+    method: POST
+    permitAll: true
+  - path: /order/status
+    method: PUT
+    permitAll: true
+  - path: /order/exists/**
+    method: ALL
+    permitAll: true
+  - path: /doc.html
+    method: ALL
+    permitAll: true
+  - path: /webjars/**
+    method: ALL
+    permitAll: true
+  - path: /v3/api-docs/**
+    method: ALL
+    permitAll: true
+  - path: /swagger-resources/**
+    method: ALL
+    permitAll: true
+  - path: /actuator/**
+    method: ALL
+    permitAll: true
+  - path: /product/audit/**
+    method: ALL
+    requiredRoles: [ADMIN]
+  - path: /product/pending
+    method: ALL
+    requiredRoles: [ADMIN]
+  - path: /product/**
+    method: DELETE
+    requiredRoles: [ADMIN]
+  - path: /order/ship/**
+    method: ALL
+    requiredRoles: [ADMIN]
+  - path: /order/export
+    method: ALL
+    requiredRoles: [ADMIN]
+  - path: /order/batch/**
+    method: ALL
+    requiredRoles: [ADMIN]
+  - path: /admin/**
+    method: ALL
+    requiredRoles: [ADMIN]
+  - path: /user/admin/**
+    method: ALL
+    requiredRoles: [ADMIN]
+  - path: /user/deposit/**
+    method: ALL
+    requiredRoles: [ADMIN]

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn compile:*)",
+      "Bash(wsl docker:*)",
+      "Read(//mnt/e/数据/**)",
+      "Bash(wsl docker-compose:*)",
+      "Bash(wsl wslpath:*)",
+      "Bash(wsl ls:*)",
+      "Bash(cmd.exe /c \"cd /d e:\\\\\\\\数据\\\\\\\\CampusMicroMart && docker-compose up -d mysql nacos 2>&1\")",
+      "Bash(wsl -e docker ps)",
+      "Bash(wsl -e ls /mnt/e/)",
+      "Bash(powershell.exe -Command \"wsl docker ps\")"
+    ]
+  }
+}

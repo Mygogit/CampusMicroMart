@@ -1,0 +1,63 @@
+# Campus Micro Mart Istio Gateway 配置
+# 外部 HTTP 入口，将流量路由到 campus-gateway
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: campus-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "campus.example.com"
+        - "*.campus.example.com"
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: campus-gateway
+spec:
+  hosts:
+    - "campus.example.com"
+  gateways:
+    - campus-gateway
+  http:
+    - match:
+        - uri:
+            prefix: /api/
+      route:
+        - destination:
+            host: campus-gateway
+            port:
+              number: 8080
+      timeout: 30s
+      retries:
+        attempts: 3
+        perTryTimeout: 10s
+        retryOn: connect-failure,refused-stream,unavailable,5xx
+    - match:
+        - uri:
+            prefix: /doc.html
+        - uri:
+            prefix: /webjars
+        - uri:
+            prefix: /v3/api-docs
+      route:
+        - destination:
+            host: campus-gateway
+            port:
+              number: 8080
+      timeout: 30s
+    - match:
+        - uri:
+            prefix: /actuator
+      route:
+        - destination:
+            host: campus-gateway
+            port:
+              number: 8080
+      timeout: 10s

@@ -1,0 +1,110 @@
+server:
+  port: 8085
+
+spring:
+  main:
+    allow-circular-references: true
+    web-application-type: servlet
+  autoconfigure:
+    exclude:
+      - org.apache.rocketmq.spring.autoconfigure.RocketMQAutoConfiguration
+  application:
+    name: payment-service
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/campus_payment?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8
+    username: root
+    password: root
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      validation-query: SELECT 1
+      test-while-idle: true
+      time-between-eviction-runs-millis: 60000
+  redis:
+    host: localhost
+    port: 6379
+    database: 0
+    timeout: 5000ms
+    connect-timeout: 5000ms
+    lettuce:
+      pool:
+        max-active: 10
+        max-wait: 3000ms
+        max-idle: 5
+        min-idle: 1
+      shutdown-timeout: 1000ms
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+        import-check:
+          enabled: false
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 5000
+            read-timeout: 10000
+          order-service:
+            url: http://localhost:8083
+    sentinel:
+      transport:
+        dashboard: localhost:8858
+        port: 8722
+
+jwt:
+  secret: Y2FtcHVzLW1pY3JvLW1hcnQtc2VjcmV0LWtleS0yMDI0LXNlY3VyZS1rZXktYmFzZTY0
+  expiration: 604800
+
+rocketmq:
+  name-server: localhost:9876
+  producer:
+    group: ${spring.application.name}-producer-group
+
+seata:
+  enabled: false
+  application-id: ${spring.application.name}
+  tx-service-group: campus-tx-group
+  service:
+    vgroup-mapping:
+      campus-tx-group: default
+    grouplist:
+      default: localhost:8091
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0

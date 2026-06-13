@@ -1,0 +1,45 @@
+# Payment Service 金丝雀发布配置
+# 90% 流量到稳定版，10% 流量到金丝雀版
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: payment-service
+spec:
+  hosts:
+    - payment-service
+  http:
+    - match:
+        - headers:
+            canary:
+              exact: "true"
+      route:
+        - destination:
+            host: payment-service
+            subset: canary
+    - route:
+        - destination:
+            host: payment-service
+            subset: stable
+          weight: 90
+        - destination:
+            host: payment-service
+            subset: canary
+          weight: 10
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: payment-service
+spec:
+  host: payment-service
+  subsets:
+    - name: stable
+      labels:
+        version: stable
+    - name: canary
+      labels:
+        version: canary
+      trafficPolicy:
+        connectionPool:
+          http:
+            maxRequestsPerConnection: 1

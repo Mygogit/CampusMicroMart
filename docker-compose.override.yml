@@ -1,0 +1,14 @@
+services:
+  mysql:
+    volumes:
+      - campus-mysql-data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+  redis:
+    ports:
+      - "6379:6379"
+    volumes:
+      - campus-redis-data:/data
+
+volumes:
+  campus-mysql-data:
+  campus-redis-data:

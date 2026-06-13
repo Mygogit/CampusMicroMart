@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: campus-config
+data:
+  # Nacos
+  NACOS_SERVER_ADDR: "nacos:8848"
+  NACOS_NAMESPACE: "public"
+  # MySQL
+  DB_USER_SERVICE_URL: "jdbc:mysql://mysql:3306/campus_user?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4"
+  DB_PRODUCT_SERVICE_URL: "jdbc:mysql://mysql:3306/campus_product?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4"
+  DB_ORDER_SERVICE_URL: "jdbc:mysql://mysql:3306/campus_order?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4"
+  DB_PAYMENT_SERVICE_URL: "jdbc:mysql://mysql:3306/campus_payment?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4"
+  # Redis
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  # RocketMQ
+  ROCKETMQ_NAME_SERVER: "rocketmq-namesrv:9876"
+  # Seata
+  SEATA_SERVER_ADDR: "seata-server:8091"
+  # Jaeger
+  JAEGER_ENDPOINT: "http://jaeger-collector:4318/v1/traces"
+  # JWT
+  JWT_SECRET: "campus-micro-mart-secret-key-2024"
+  JWT_EXPIRATION: "604800000"
+  # Sentinel
+  SENTINEL_DASHBOARD: "sentinel-dashboard:8858"
+  # Logging
+  LOG_LEVEL_ROOT: "INFO"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nacos-config
+data:
+  application.properties: |
+    spring.datasource.platform=mysql
+    db.num=1
+    db.url.0=jdbc:mysql://mysql:3306/nacos?characterEncoding=utf8&connectTimeout=1000&socketTimeout=3000&autoReconnect=true&useSSL=false
+    db.user.0=root
+    db.password.0=${MYSQL_ROOT_PASSWORD}

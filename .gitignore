@@ -1,0 +1,57 @@
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+
+# Build output
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Distribution & build artifacts (too large for git)
+dist-standalone/
+dist-standalone.zip
+dist/
+*.tar.gz
+*.zip
+
+# Frontend dependencies (too large)
+campus-frontend/node_modules/
+
+# Embedded runtime dependencies
+env-setup/
+
+# Runtime data
+nacos/
+mysql/
+redis/
+grafana/
+prometheus/
+
+# Logs
+*.log
+logs/
+gateway.log
+order-service.log
+
+# Temp & OS files
+*.tmp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+derby.log
+dump.rdb
+*.pid
+
+# Environment
+.env
+.env.local
+*.env

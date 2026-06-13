@@ -1,0 +1,24 @@
+# ============================================================
+# order-service Dockerfile (multi-stage build)
+# 构建：docker build -f Dockerfile.order-service -t campus-order-service:latest .
+# 运行：docker run -p 8083:8083 --name campus-order-service campus-order-service:latest
+# ============================================================
+
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY campus-common/pom.xml campus-common/
+COPY order-service/pom.xml order-service/
+RUN mvn dependency:go-offline -pl order-service -am -B
+
+COPY campus-common/src campus-common/src
+COPY order-service/src order-service/src
+RUN mvn package -pl order-service -am -DskipTests -B
+
+FROM eclipse-temurin:17-jre-alpine
+RUN addgroup --system campus && adduser --system campus --ingroup campus
+USER campus:campus
+WORKDIR /app
+COPY --from=build /app/order-service/target/*.jar app.jar
+EXPOSE 8083
+ENTRYPOINT ["java", "-jar", "app.jar"]
