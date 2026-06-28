@@ -53,6 +53,8 @@ spring:
             read-timeout: 10000
           order-service:
             url: http://localhost:8083
+          user-service:
+            url: http://localhost:8084
     sentinel:
       transport:
         dashboard: localhost:8858
@@ -108,3 +110,14 @@ mybatis-plus:
       logic-delete-field: deleted
       logic-delete-value: 1
       logic-not-delete-value: 0
+
+# ==================== 支付模块配置 ====================
+payment:
+  retry:
+    max-retries: 3
+    intervals: 3000,10000,30000  # 毫秒: 3s, 10s, 30s
+  expire:
+    minutes: 15
+    scheduler-cron: "0 */5 * * * ?"  # 每5分钟
+  simulate:
+    fail-rate: 0.3  # 30% 模拟失败率，开发环境可调高

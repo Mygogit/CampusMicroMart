@@ -22,8 +22,7 @@ public class CreateOrderDTO {
     @Min(value = 1, message = "数量至少为1")
     private Integer quantity;
 
-    // 多商品下单
-    @NotEmpty(message = "订单商品列表不能为空")
+    // 多商品下单（可选，向后兼容单商品下单）
     private List<OrderItemDTO> items;
 
     private String shippingAddress;

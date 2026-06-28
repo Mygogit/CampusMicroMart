@@ -32,6 +32,16 @@ spring:
         max-wait: -1
         max-idle: 5
         min-idle: 2
+  cloud:
+    openfeign:
+      client:
+        config:
+          user-service:
+            url: http://localhost:8084
+          order-service:
+            url: http://localhost:8083
+          product-service:
+            url: http://localhost:8081
 
 jwt:
   secret: Y2FtcHVzLW1pY3JvLW1hcnQtc2VjcmV0LWtleS0yMDI0LXNlY3VyZS1rZXktYmFzZTY0

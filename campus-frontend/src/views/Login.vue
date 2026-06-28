@@ -21,7 +21,10 @@ async function handleLogin() {
     const res = await userApi.login(form.value)
     if (res.data.code === 200) {
       const token = res.data.data
-      const payload = JSON.parse(atob(token.split('.')[1]))
+      const raw = token.split('.')[1]
+      const base64 = raw.replace(/-/g, '+').replace(/_/g, '/')
+      const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=')
+      const payload = JSON.parse(atob(padded))
       auth.setAuth(token, payload.role || 'STUDENT', String(payload.userId))
       ElMessage.success('登录成功')
       router.push('/')

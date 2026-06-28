@@ -13,6 +13,14 @@ async function handleRegister() {
     ElMessage.warning('请填写完整信息')
     return
   }
+  if (form.value.username.length < 3) {
+    ElMessage.warning('用户名长度至少3位')
+    return
+  }
+  if (form.value.password.length < 6) {
+    ElMessage.warning('密码长度至少6位')
+    return
+  }
   loading.value = true
   try {
     const res = await userApi.register(form.value)

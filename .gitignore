@@ -35,6 +35,12 @@ redis/
 grafana/
 prometheus/
 
+# Local tool configs
+.codebuddy/
+.jdk17/
+.m2repo/
+.mvn/
+
 # Logs
 *.log
 logs/

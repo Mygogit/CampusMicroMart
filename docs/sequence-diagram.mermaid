@@ -1,0 +1,122 @@
+sequenceDiagram
+    actor User
+    participant Frontend
+    participant PaymentController
+    participant PaymentServiceImpl
+    participant PaymentStateMachine
+    participant OrderFeignClient
+    participant UserFeignClient
+    participant PaymentMapper
+    participant RocketMQ
+    participant PaymentNotificationProducer
+
+    Note over User, RocketMQ: === 创建支付 ===
+    User->>Frontend: 点击"支付"
+    Frontend->>PaymentController: POST /api/payment/create
+    PaymentController->>PaymentServiceImpl: createPayment(dto)
+
+    rect rgb(240,248,255)
+        Note over PaymentServiceImpl: P0-5 输入校验
+        PaymentServiceImpl->>OrderFeignClient: getOrder(orderId)
+        OrderFeignClient-->>PaymentServiceImpl: Order (status=PENDING_PAYMENT)
+        PaymentServiceImpl->>PaymentMapper: 查是否存在进行中支付
+        PaymentMapper-->>PaymentServiceImpl: null (无重复)
+        PaymentServiceImpl->>PaymentServiceImpl: 校验金额 > 0 && 匹配订单金额
+    end
+
+    PaymentServiceImpl->>PaymentMapper: insert(Payment)
+    Note over Payment: status=WAITING_PAY, expireTime=now+15min
+    PaymentServiceImpl->>RocketMQ: 发送延迟消息(level=14)
+    Note over RocketMQ: 约15分钟后触发超时取消
+    PaymentServiceImpl-->>PaymentController: PaymentVO
+    PaymentController-->>Frontend: Result~PaymentVO~
+    Frontend-->>User: 展示支付倒计时
+
+    Note over User, RocketMQ: === 模拟支付 ===
+    User->>Frontend: 点击"确认支付"
+    Frontend->>PaymentController: POST /api/payment/simulate/{id}
+    PaymentController->>PaymentServiceImpl: simulatePayment(id)
+
+    PaymentServiceImpl->>PaymentStateMachine: validateTransition(WAITING_PAY→PROCESSING)
+    PaymentStateMachine-->>PaymentServiceImpl: OK
+    PaymentServiceImpl->>PaymentMapper: update status=PROCESSING
+
+    Note over PaymentServiceImpl: 模拟支付处理（随机成功/失败）
+    alt 模拟成功
+        PaymentServiceImpl->>PaymentStateMachine: validateTransition(PROCESSING→SUCCESS)
+        PaymentStateMachine-->>PaymentServiceImpl: OK
+        PaymentServiceImpl->>UserFeignClient: deductDeposit(userId, amount)
+        PaymentServiceImpl->>PaymentMapper: update status=SUCCESS, callbackStatus=SUCCESS
+        PaymentServiceImpl->>PaymentNotificationProducer: send 支付成功通知
+    else 模拟失败
+        PaymentServiceImpl->>PaymentStateMachine: validateTransition(PROCESSING→FAIL)
+        PaymentStateMachine-->>PaymentServiceImpl: OK
+        PaymentServiceImpl->>PaymentMapper: update status=FAIL, failReason=...
+        PaymentServiceImpl->>UserFeignClient: unfreezeDeposit(userId)
+        Note over PaymentServiceImpl: 触发自动重试机制
+        PaymentServiceImpl->>RocketMQ: 发送重试延迟消息(3s)
+    end
+
+    PaymentServiceImpl-->>PaymentController: PaymentVO
+    PaymentController-->>Frontend: Result~PaymentVO~
+    Frontend-->>User: 展示支付结果
+
+    Note over User, RocketMQ: === 前端状态轮询 ===
+    loop 每3秒
+        Frontend->>PaymentController: GET /api/payment/by-order/{orderId}
+        PaymentController->>PaymentServiceImpl: queryByOrderId(orderId)
+        PaymentServiceImpl-->>PaymentController: PaymentVO
+        PaymentController-->>Frontend: Result~PaymentVO~
+        Frontend->>Frontend: 更新倒计时 & 状态展示
+    end
+
+    Note over User, RocketMQ: === 超时取消（MQ 延迟消息触发） ===
+    RocketMQ->>PaymentServiceImpl: 超时取消消息(支付创建后~15min)
+    PaymentServiceImpl->>PaymentMapper: findById(paymentId)
+    PaymentMapper-->>PaymentServiceImpl: Payment (status=WAITING_PAY)
+    PaymentServiceImpl->>PaymentStateMachine: validateTransition(status→EXPIRED)
+    PaymentStateMachine-->>PaymentServiceImpl: OK
+    PaymentServiceImpl->>PaymentMapper: update status=EXPIRED
+    PaymentServiceImpl->>UserFeignClient: unfreezeDeposit(userId)
+    PaymentServiceImpl->>PaymentNotificationProducer: send 支付过期通知
+
+    Note over User, RocketMQ: === 失败自动重试（MQ 驱动） ===
+    RocketMQ->>PaymentServiceImpl: 重试延迟消息到达(3s/10s/30s)
+    PaymentServiceImpl->>PaymentMapper: findById
+    PaymentMapper-->>PaymentServiceImpl: Payment (status=FAIL, retryCount=N)
+    PaymentServiceImpl->>PaymentServiceImpl: retryCount < maxRetries?
+    PaymentServiceImpl->>PaymentStateMachine: validateTransition(FAIL→RETRYING)
+    PaymentStateMachine-->>PaymentServiceImpl: OK
+    PaymentServiceImpl->>PaymentMapper: update status=RETRYING, retryCount=N+1
+    PaymentServiceImpl->>UserFeignClient: freezeDeposit 重新冻结押金
+
+    alt 重试成功
+        PaymentServiceImpl->>PaymentStateMachine: validateTransition(RETRYING→SUCCESS)
+        PaymentServiceImpl->>PaymentMapper: update status=SUCCESS
+        PaymentServiceImpl->>UserFeignClient: deductDeposit
+    else 重试失败 && 仍有次数
+        PaymentServiceImpl->>PaymentMapper: update status=FAIL
+        PaymentServiceImpl->>RocketMQ: 发送下一级延迟(N+1级间隔)
+    else 重试失败 && 次数耗尽
+        PaymentServiceImpl->>PaymentMapper: update status=FAIL
+        PaymentServiceImpl->>UserFeignClient: unfreezeDeposit
+        Note over PaymentServiceImpl: 最终失败，不再重试
+    end
+
+    Note over User, RocketMQ: === 手动重试 ===
+    User->>Frontend: 点击"重试支付"
+    Frontend->>PaymentController: POST /api/payment/{id}/retry
+    PaymentController->>PaymentServiceImpl: retryPayment(id)
+    PaymentServiceImpl->>PaymentServiceImpl: 同自动重试逻辑
+    PaymentServiceImpl-->>PaymentController: PaymentVO
+    PaymentController-->>Frontend: Result~PaymentVO~
+
+    Note over User, RocketMQ: === 支付回调 ===
+    PaymentController->>PaymentServiceImpl: handleCallback(CallbackRequest)
+    PaymentServiceImpl->>PaymentMapper: findByPaymentNo
+    PaymentMapper-->>PaymentServiceImpl: Payment
+    PaymentServiceImpl->>PaymentServiceImpl: 幂等校验(callbackStatus 重复?)
+    PaymentServiceImpl->>PaymentStateMachine: validateTransition→SUCCESS/FAIL
+    PaymentServiceImpl->>PaymentMapper: update status + callbackStatus
+    PaymentServiceImpl->>PaymentNotificationProducer: send 异步通知
+    PaymentServiceImpl-->>PaymentController: CallbackResponse

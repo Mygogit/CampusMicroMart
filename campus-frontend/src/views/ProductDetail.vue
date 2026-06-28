@@ -65,7 +65,7 @@ onMounted(loadProduct)
         <h3>下单</h3>
         <el-form label-width="80px">
           <el-form-item label="数量">
-            <el-input-number v-model="orderForm.quantity" :min="1" :max="product.stock" />
+            <el-input-number v-model="orderForm.quantity" :min="1" :max="Math.max(product.stock || 0, 1)" />
           </el-form-item>
           <el-form-item label="收货地址">
             <el-input v-model="orderForm.shippingAddress" placeholder="请输入收货地址" />

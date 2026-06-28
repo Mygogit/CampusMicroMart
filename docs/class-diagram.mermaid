@@ -1,0 +1,137 @@
+classDiagram
+    class Payment {
+        +Long id
+        +String paymentNo
+        +Long orderId
+        +Long userId
+        +BigDecimal amount
+        +Integer status
+        +String paymentMethod
+        +LocalDateTime createTime
+        +LocalDateTime updateTime
+        +LocalDateTime expireTime
+        +Integer retryCount
+        +String callbackStatus
+        +String failReason
+        +LocalDateTime callbackTime
+    }
+
+    class PaymentStatusConstant {
+        <<constant>>
+        +int WAITING_PAY = 0
+        +int PROCESSING = 1
+        +int SUCCESS = 2
+        +int FAIL = 3
+        +int EXPIRED = 4
+        +int RETRYING = 5
+    }
+
+    class PaymentErrorCode {
+        <<enum>>
+        PAYMENT_NOT_FOUND
+        ORDER_NOT_EXIST
+        ORDER_STATUS_INVALID
+        AMOUNT_MISMATCH
+        DUPLICATE_PAYMENT
+        PAYMENT_EXPIRED
+        RETRY_EXCEEDED
+        STATE_TRANSITION_INVALID
+        CALLBACK_ALREADY_PROCESSED
+        CANCEL_NOT_ALLOWED
+    }
+
+    class PaymentStateMachine {
+        -static Map~Integer, Set~Integer~~ transitions
+        +static boolean canTransition(int from, int to)
+        +static void validateTransition(int from, int to)
+        +static Set~Integer~ getTerminalStates()
+        +static boolean isTerminal(int status)
+    }
+
+    class CreatePaymentDTO {
+        +Long orderId
+        +BigDecimal amount
+        +String paymentMethod
+        +@NotNull @Positive BigDecimal amount
+        +@NotNull Long orderId
+    }
+
+    class CallbackRequest {
+        +String paymentNo
+        +String callbackStatus
+        +String failReason
+        +String sign
+        +Long timestamp
+    }
+
+    class CallbackResponse {
+        +String code
+        +String message
+        +String paymentNo
+    }
+
+    class PaymentVO {
+        +Long id
+        +String paymentNo
+        +Long orderId
+        +BigDecimal amount
+        +Integer status
+        +String statusText
+        +Integer retryCount
+        +Integer maxRetries
+        +String failReason
+        +Long remainingSeconds
+        +LocalDateTime expireTime
+        +LocalDateTime createTime
+    }
+
+    class RetryProperties {
+        +int maxRetries = 3
+        +List~Long~ intervals = [3, 10, 30]
+        +int expireMinutes = 15
+    }
+
+    class PaymentService {
+        <<interface>>
+        +PaymentVO createPayment(CreatePaymentDTO dto)
+        +PaymentVO handleCallback(CallbackRequest req)
+        +PaymentVO retryPayment(Long id)
+        +void cancelPayment(Long id)
+        +PaymentVO queryByOrderId(Long orderId)
+        +void expireCheck()
+        +PaymentVO simulatePayment(Long id)
+    }
+
+    class PaymentServiceImpl {
+        -PaymentMapper paymentMapper
+        -OrderFeignClient orderFeignClient
+        -UserFeignClient userFeignClient
+        -PaymentNotificationProducer notificationProducer
+        -RocketMQTemplate rocketMQTemplate
+        -PaymentStateMachine stateMachine
+        -RetryProperties retryProperties
+    }
+
+    class PaymentController {
+        +POST /api/payment/create
+        +POST /api/payment/simulate/{id}
+        +POST /api/payment/callback
+        +GET /api/payment/by-order/{orderId}
+        +POST /api/payment/{id}/retry
+        +POST /api/payment/{id}/cancel
+        +POST /api/payment/expire-check
+        +GET /api/payment/{id}
+    }
+
+    class PaymentExpireScheduler {
+        -PaymentService paymentService
+        +void scanExpiredPayments()
+    }
+
+    PaymentService <|.. PaymentServiceImpl
+    PaymentServiceImpl --> Payment : operates
+    PaymentServiceImpl --> PaymentStateMachine : validates
+    PaymentServiceImpl --> RetryProperties : configures
+    PaymentVO --> Payment : maps from
+    CreatePaymentDTO --> Payment : creates
+    CallbackRequest --> Payment : updates
