@@ -19,6 +19,7 @@ target/
 dist-standalone/
 dist-standalone.zip
 dist/
+campus-frontend/dist/
 *.tar.gz
 *.zip
 
@@ -34,6 +35,7 @@ mysql/
 redis/
 grafana/
 prometheus/
+uploads/
 
 # Local tool configs
 .codebuddy/
@@ -50,14 +52,49 @@ order-service.log
 # Temp & OS files
 *.tmp
 *.bak
+*.bak-*
 *.swp
 .DS_Store
 Thumbs.db
 derby.log
 dump.rdb
 *.pid
+.seata_patch/
+__pycache__/
+*.pyc
 
 # Environment
 .env
 .env.local
 *.env
+
+# 本地 Agent 内存(非项目源码)
+.workbuddy/
+
+# 毕业论文 / 答辩相关材料(不入库)
+毕业论文*
+*论文*.md
+*论文*.docx
+*论文*.doc
+*论文*.pdf
+*论文*.pptx
+*答辩*
+*开题*
+*查重*
+*任务书*
+generate_thesis_docx.py
+add_headers_pages.py
+render_puml.py
+*.puml
+*.docx
+*.doc
+*.pdf
+*.pptx
+*.ppt
+PROJECT_EVALUATION.md
+
+# 个人信息 / 本机私有数据(不入库)
+.mailmap
+testdata/
+test/results/
+test/data/test-users.csv
