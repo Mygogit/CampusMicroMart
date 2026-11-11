@@ -17,8 +17,14 @@ public class PaymentNotificationProducer {
     private RocketMQTemplate rocketMQTemplate;
 
     public void sendPaymentNotification(PaymentNotificationMessage message) {
-        rocketMQTemplate.syncSend(MqTopicConstant.PAYMENT_NOTIFICATION, message);
-        log.info("支付通知消息已发送, paymentId={}, orderId={}, success={}",
-                message.getPaymentId(), message.getOrderId(), message.getSuccess());
+        try {
+            rocketMQTemplate.syncSend(MqTopicConstant.PAYMENT_NOTIFICATION, message);
+            log.info("支付通知消息已发送, paymentId={}, orderId={}, success={}",
+                    message.getPaymentId(), message.getOrderId(), message.getSuccess());
+        } catch (Exception e) {
+            // MQ 不可用时降级：支付结果已落库，订单侧可通过查询接口补偿，不阻塞主流程
+            log.error("支付通知消息发送失败（已降级，不影响主流程）, paymentId={}, orderId={}, success={}",
+                    message.getPaymentId(), message.getOrderId(), message.getSuccess(), e);
+        }
     }
 }

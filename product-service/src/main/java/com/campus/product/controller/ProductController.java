@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.common.constant.AuditStatusConstant;
 import com.campus.common.constant.ProductStatusConstant;
+import com.campus.common.feign.ProductInfo;
 import com.campus.common.result.Result;
 import com.campus.common.security.UserContext;
 import com.campus.product.dto.AuditProductDTO;
@@ -18,8 +19,6 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @Slf4j
 @Tag(name = "商品管理")
@@ -75,7 +74,27 @@ public class ProductController {
     @Operation(summary = "获取商品详情")
     @GetMapping("/{id}")
     public Result<Product> getById(@PathVariable Long id) {
-        return Result.success(productService.getById(id));
+        Product product = productService.getById(id);
+        if (product == null) {
+            return Result.error("商品不存在");
+        }
+        // 未过审/未上架的商品，仅发布者本人或管理员可见
+        boolean visible = AuditStatusConstant.APPROVED.equals(product.getAuditStatus())
+                && ProductStatusConstant.ON_SALE.equals(product.getProductStatus());
+        if (!visible) {
+            Long userId = UserContext.getCurrentUserId();
+            boolean owner = userId != null && userId.equals(product.getUserId());
+            if (!owner && !UserContext.isAdmin()) {
+                return Result.error(403, "商品不可见");
+            }
+        }
+        return Result.success(product);
+    }
+
+    @Operation(summary = "服务间获取商品快照（内部调用）")
+    @GetMapping("/{id}/info")
+    public Result<ProductInfo> getInfo(@PathVariable Long id) {
+        return Result.success(productService.getProductInfo(id));
     }
 
     @Operation(summary = "新增商品")
@@ -91,15 +110,18 @@ public class ProductController {
         if (product == null) {
             return Result.error("商品不存在");
         }
+        if (!isOwnerOrAdmin(product)) {
+            return Result.error(403, "无权操作他人商品");
+        }
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
         product.setPrice(dto.getPrice());
         product.setStock(dto.getStock());
-        product.setProductStatus(dto.getProductStatus());
         product.setCategoryId(dto.getCategoryId());
         product.setImages(dto.getImages());
         product.setCourseCode(dto.getCourseCode());
         product.setDormitory(dto.getDormitory());
+        // 状态字段（productStatus/auditStatus）不允许在此处修改，须走审核/上下架流程
         productService.updateById(product);
         return Result.success();
     }
@@ -107,6 +129,13 @@ public class ProductController {
     @Operation(summary = "删除商品")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
+        Product product = productService.getById(id);
+        if (product == null) {
+            return Result.error("商品不存在");
+        }
+        if (!UserContext.isAdmin()) {
+            return Result.error(403, "仅管理员可删除商品");
+        }
         productService.removeById(id);
         return Result.success();
     }
@@ -131,6 +160,13 @@ public class ProductController {
     @Operation(summary = "卖家下架商品")
     @PutMapping("/{id}/off-shelf")
     public Result<Void> offShelf(@PathVariable Long id) {
+        Product product = productService.getById(id);
+        if (product == null) {
+            return Result.error("商品不存在");
+        }
+        if (!isOwnerOrAdmin(product)) {
+            return Result.error(403, "无权操作他人商品");
+        }
         productService.offShelf(id);
         return Result.success();
     }
@@ -138,28 +174,41 @@ public class ProductController {
     @Operation(summary = "卖家取消发布")
     @PostMapping("/{id}/cancel")
     public Result<Void> cancel(@PathVariable Long id) {
-        log.info("接收到取消商品发布请求, productId={}", id);
+        Product product = productService.getById(id);
+        if (product == null) {
+            return Result.error("商品不存在");
+        }
+        if (!isOwnerOrAdmin(product)) {
+            return Result.error(403, "无权操作他人商品");
+        }
         productService.cancelProduct(id);
-        log.info("取消商品发布成功, productId={}", id);
         return Result.success();
     }
 
-    @Operation(summary = "扣减库存")
+    @Operation(summary = "扣减库存（内部调用）")
     @PostMapping("/deduct")
     public Result<Boolean> deductStock(@RequestParam("productId") Long productId, @RequestParam("quantity") Integer quantity) {
         return Result.success(productService.deductStock(productId, quantity));
     }
 
-    @Operation(summary = "回滚库存")
+    @Operation(summary = "回滚库存（内部调用）")
     @PostMapping("/rollback")
     public Result<Boolean> rollbackStock(@RequestParam("productId") Long productId, @RequestParam("quantity") Integer quantity) {
         return Result.success(productService.rollbackStock(productId, quantity));
     }
 
-    @Operation(summary = "标记商品已售出")
+    @Operation(summary = "标记商品已售出（内部调用）")
     @PutMapping("/{id}/mark-sold")
     public Result<Void> markSold(@PathVariable Long id) {
         productService.markSold(id);
         return Result.success();
+    }
+
+    private boolean isOwnerOrAdmin(Product product) {
+        Long userId = UserContext.getCurrentUserId();
+        if (userId == null) {
+            return false;
+        }
+        return userId.equals(product.getUserId()) || UserContext.isAdmin();
     }
 }

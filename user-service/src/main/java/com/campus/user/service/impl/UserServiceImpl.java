@@ -2,6 +2,7 @@ package com.campus.user.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.campus.common.constant.CreditChangeTypeConstant;
 import com.campus.common.constant.RedisConstant;
@@ -60,11 +61,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setRole("STUDENT");
         user.setCreditScore(100);
         user.setDeposit(BigDecimal.ZERO);
+        user.setFrozenDeposit(BigDecimal.ZERO);
         save(user);
 
         creditLogService.addCreditLog(user.getId(), CreditChangeTypeConstant.REGISTER, 100, "注册初始信用分");
 
-        return convertToVO(user);
+        return toVO(user);
     }
 
     @Override
@@ -102,7 +104,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user == null) {
             throw new BusinessException("用户不存在");
         }
-        return convertToVO(user);
+        return toVO(user);
     }
 
     @Override
@@ -126,55 +128,114 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (dto.getPhone() != null) user.setPhone(dto.getPhone());
         if (dto.getEmail() != null) user.setEmail(dto.getEmail());
         updateById(user);
-        return convertToVO(user);
+        return toVO(user);
     }
 
+    // ==================== 保证金账户（可用余额 deposit / 冻结余额 frozenDeposit） ====================
+
+    private void validateAmount(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException("金额必须大于0");
+        }
+    }
+
+    /**
+     * 充值：增加可用余额（模拟，真实场景应接支付渠道）。
+     */
+    @Override
+    @Transactional
+    public boolean recharge(Long userId, BigDecimal amount) {
+        validateAmount(amount);
+        LambdaUpdateWrapper<User> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(User::getId, userId)
+               .setSql("deposit = deposit + {0}", amount);
+        int rows = baseMapper.update(null, wrapper);
+        if (rows == 0) {
+            throw new BusinessException("用户不存在");
+        }
+        log.info("保证金充值成功, userId={}, amount={}", userId, amount);
+        return true;
+    }
+
+    /**
+     * 冻结：可用余额 → 冻结余额（原子条件更新，防止并发超冻）。
+     */
     @Override
     @Transactional
     public boolean freezeDeposit(Long userId, BigDecimal amount) {
-        User user = getById(userId);
-        if (user == null) {
-            throw new BusinessException("用户不存在");
-        }
-        if (user.getDeposit().compareTo(amount) < 0) {
+        validateAmount(amount);
+        LambdaUpdateWrapper<User> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(User::getId, userId)
+               .ge(User::getDeposit, amount)
+               .setSql("deposit = deposit - {0}", amount)
+               .setSql("frozen_deposit = frozen_deposit + {0}", amount);
+        int rows = baseMapper.update(null, wrapper);
+        if (rows == 0) {
             throw new BusinessException("保证金余额不足");
         }
-        user.setDeposit(user.getDeposit().subtract(amount));
-        updateById(user);
-        log.info("保证金冻结成功, userId={}, amount={}, balance={}", userId, amount, user.getDeposit());
+        log.info("保证金冻结成功, userId={}, amount={}", userId, amount);
         return true;
     }
 
+    /**
+     * 解冻：冻结余额 → 可用余额（原子条件更新，杜绝"无冻结即解冻"凭空加钱）。
+     */
     @Override
     @Transactional
     public boolean unfreezeDeposit(Long userId, BigDecimal amount) {
-        User user = getById(userId);
-        if (user == null) {
+        validateAmount(amount);
+        LambdaUpdateWrapper<User> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(User::getId, userId)
+               .ge(User::getFrozenDeposit, amount)
+               .setSql("frozen_deposit = frozen_deposit - {0}", amount)
+               .setSql("deposit = deposit + {0}", amount);
+        int rows = baseMapper.update(null, wrapper);
+        if (rows == 0) {
+            throw new BusinessException("冻结金额不足，无法解冻");
+        }
+        log.info("保证金解冻成功, userId={}, amount={}", userId, amount);
+        return true;
+    }
+
+    /**
+     * 扣减：从冻结余额中永久扣除（资金离开买家，进入平台托管）。
+     */
+    @Override
+    @Transactional
+    public boolean deductDeposit(Long userId, BigDecimal amount) {
+        validateAmount(amount);
+        LambdaUpdateWrapper<User> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(User::getId, userId)
+               .ge(User::getFrozenDeposit, amount)
+               .setSql("frozen_deposit = frozen_deposit - {0}", amount);
+        int rows = baseMapper.update(null, wrapper);
+        if (rows == 0) {
+            throw new BusinessException("冻结金额不足，无法扣减");
+        }
+        log.info("保证金扣减成功, userId={}, amount={}", userId, amount);
+        return true;
+    }
+
+    /**
+     * 结算：给卖家入账（确认收货后由 order-service 调用）。
+     */
+    @Override
+    @Transactional
+    public boolean creditDeposit(Long userId, BigDecimal amount) {
+        validateAmount(amount);
+        LambdaUpdateWrapper<User> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(User::getId, userId)
+               .setSql("deposit = deposit + {0}", amount);
+        int rows = baseMapper.update(null, wrapper);
+        if (rows == 0) {
             throw new BusinessException("用户不存在");
         }
-        user.setDeposit(user.getDeposit().add(amount));
-        updateById(user);
-        log.info("保证金解冻成功, userId={}, amount={}, balance={}", userId, amount, user.getDeposit());
+        log.info("保证金结算入账成功, userId={}, amount={}", userId, amount);
         return true;
     }
 
     @Override
-    @Transactional
-    public boolean deductDeposit(Long userId, BigDecimal amount) {
-        User user = getById(userId);
-        if (user == null) {
-            throw new BusinessException("用户不存在");
-        }
-        if (user.getDeposit().compareTo(amount) < 0) {
-            throw new BusinessException("保证金余额不足");
-        }
-        user.setDeposit(user.getDeposit().subtract(amount));
-        updateById(user);
-        log.info("保证金额扣减成功, userId={}, amount={}, balance={}", userId, amount, user.getDeposit());
-        return true;
-    }
-
-    private UserVO convertToVO(User user) {
+    public UserVO toVO(User user) {
         UserVO vo = new UserVO();
         BeanUtil.copyProperties(user, vo);
         return vo;

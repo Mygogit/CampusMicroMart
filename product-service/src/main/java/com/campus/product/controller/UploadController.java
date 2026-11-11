@@ -33,14 +33,24 @@ public class UploadController {
         if (file.isEmpty()) {
             return Result.error("文件不能为空");
         }
+        // 大小限制：最多 5MB，防止资源滥用
+        if (file.getSize() > 5 * 1024 * 1024) {
+            return Result.error("图片大小不能超过 5MB");
+        }
         String originalFilename = file.getOriginalFilename();
         String extension = "";
         if (originalFilename != null && originalFilename.contains(".")) {
             extension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
         }
-        // 只允许 PNG 和 JPG/JPEG 格式
+        // 只允许 PNG 和 JPG/JPEG 格式（扩展名白名单）
         if (!extension.equals(".png") && !extension.equals(".jpg") && !extension.equals(".jpeg")) {
             return Result.error("仅支持 PNG、JPG 格式的图片");
+        }
+        // 内容类型校验：拒绝伪装成图片的 HTML/JS 等文件
+        String contentType = file.getContentType();
+        if (contentType == null || !(contentType.equalsIgnoreCase("image/png")
+                || contentType.equalsIgnoreCase("image/jpeg"))) {
+            return Result.error("文件内容类型非法，仅支持 PNG、JPG");
         }
         String filename = UUID.randomUUID().toString() + extension;
 

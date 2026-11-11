@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { userApi } from '../../api/user'
 
@@ -7,6 +7,9 @@ const users = ref<any[]>([])
 const loading = ref(false)
 const page = ref(1)
 const total = ref(0)
+
+const adminCount = computed(() => users.value.filter(u => u.role === 'ADMIN').length)
+const disabledCount = computed(() => users.value.filter(u => u.status === 0).length)
 
 async function loadUsers() {
   loading.value = true
@@ -27,7 +30,9 @@ async function handleToggleStatus(user: any) {
     await userApi.updateUserStatus(user.id, newStatus)
     ElMessage.success(`已${action}`)
     loadUsers()
-  } catch { /* cancelled */ }
+  } catch {
+    /* 用户取消 */
+  }
 }
 
 async function handleChangeRole(user: any) {
@@ -42,7 +47,9 @@ async function handleChangeRole(user: any) {
     await userApi.updateUserRole(user.id, newRole)
     ElMessage.success('角色已更新')
     loadUsers()
-  } catch { /* cancelled */ }
+  } catch {
+    /* 用户取消 */
+  }
 }
 
 function onPageChange(p: number) {
@@ -54,64 +61,102 @@ onMounted(loadUsers)
 </script>
 
 <template>
-  <div>
-    <h2>用户管理</h2>
+  <div class="users-page fade-up">
+    <div class="page-head">
+      <div>
+        <h1>用户管理</h1>
+        <p class="sub">共 {{ total }} 位注册用户 · 本页管理员 {{ adminCount }} 人、禁用 {{ disabledCount }} 人</p>
+      </div>
+      <button class="btn btn-ghost" @click="loadUsers">
+        <svg class="icon-sm" aria-hidden="true"><use href="#i-refresh" /></svg>
+        刷新列表
+      </button>
+    </div>
 
-    <el-table v-loading="loading" :data="users" stripe>
-      <el-table-column prop="id" label="ID" width="60" />
-      <el-table-column prop="username" label="用户名" min-width="120" />
-      <el-table-column prop="nickname" label="昵称" min-width="100">
-        <template #default="{ row }">{{ row.nickname || '-' }}</template>
-      </el-table-column>
-      <el-table-column prop="phone" label="手机号" width="130">
-        <template #default="{ row }">{{ row.phone || '-' }}</template>
-      </el-table-column>
-      <el-table-column label="角色" width="90">
-        <template #default="{ row }">
-          <el-tag :type="row.role === 'ADMIN' ? 'danger' : 'primary'" size="small">
-            {{ row.role === 'ADMIN' ? '管理员' : '学生' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="状态" width="80">
-        <template #default="{ row }">
-          <el-tag :type="row.status === 0 ? 'danger' : 'success'" size="small">
-            {{ row.status === 0 ? '已禁用' : '正常' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="creditScore" label="信用分" width="80" />
-      <el-table-column prop="deposit" label="保证金" width="90">
-        <template #default="{ row }">&yen;{{ row.deposit || 0 }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="200">
-        <template #default="{ row }">
-          <el-button size="small" type="warning" @click="handleChangeRole(row)">
-            {{ row.role === 'ADMIN' ? '降为学生' : '升为管理员' }}
-          </el-button>
-          <el-button
-            size="small"
-            :type="row.status === 0 ? 'success' : 'danger'"
-            @click="handleToggleStatus(row)"
-          >
-            {{ row.status === 0 ? '启用' : '禁用' }}
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <div v-loading="loading" class="table-wrap">
+      <el-table v-if="users.length > 0" :data="users" stripe>
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="username" label="用户名" min-width="130" />
+        <el-table-column label="昵称" min-width="110">
+          <template #default="{ row }">{{ row.nickname || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="手机号" width="140">
+          <template #default="{ row }">{{ row.phone || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="角色" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.role === 'ADMIN' ? 'danger' : 'primary'" size="small">
+              {{ row.role === 'ADMIN' ? '管理员' : '学生' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 0 ? 'danger' : 'success'" size="small">
+              {{ row.status === 0 ? '已禁用' : '正常' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="creditScore" label="信用分" width="90" />
+        <el-table-column label="保证金" width="100">
+          <template #default="{ row }">¥{{ row.deposit || 0 }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="230" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" type="warning" @click="handleChangeRole(row)">
+              {{ row.role === 'ADMIN' ? '降为学生' : '升为管理员' }}
+            </el-button>
+            <el-button
+              size="small"
+              :type="row.status === 0 ? 'success' : 'danger'"
+              @click="handleToggleStatus(row)"
+            >
+              {{ row.status === 0 ? '启用' : '禁用' }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <el-pagination
-      v-if="total > 10"
-      layout="prev, pager, next"
-      :total="total"
-      :page-size="10"
-      :current-page="page"
-      @current-change="onPageChange"
-      style="justify-content:center;margin-top:20px"
-    />
+      <div v-else-if="!loading" class="empty-state">
+        <div class="art"><svg class="ic"><use href="#i-users" /></svg></div>
+        <h3>暂无用户数据</h3>
+        <p>等待同学注册后即可在此管理</p>
+      </div>
+      <div v-else class="table-skeleton" />
+    </div>
+
+    <div v-if="total > 10" class="pagination-wrapper">
+      <el-pagination
+        layout="prev, pager, next"
+        :total="total"
+        :page-size="10"
+        :current-page="page"
+        @current-change="onPageChange"
+      />
+    </div>
   </div>
 </template>
 
 <style scoped>
-h2 { margin-bottom: 20px; }
+.table-wrap {
+  min-height: 220px;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.table-skeleton {
+  height: 180px;
+}
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-6);
+}
+@media (max-width: 767px) {
+  .table-wrap {
+    padding: var(--space-3);
+  }
+}
 </style>

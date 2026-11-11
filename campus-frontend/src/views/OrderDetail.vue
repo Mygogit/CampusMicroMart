@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { orderApi } from '../api/order'
@@ -33,7 +33,9 @@ async function handleCancel() {
     await orderApi.cancel(order.value.id)
     ElMessage.success('已取消')
     loadOrder()
-  } catch { /* cancelled */ }
+  } catch {
+    /* 用户取消 */
+  }
 }
 
 async function handleConfirm() {
@@ -42,7 +44,9 @@ async function handleConfirm() {
     await orderApi.confirm(order.value.id)
     ElMessage.success('确认收货成功')
     loadOrder()
-  } catch { /* cancelled */ }
+  } catch {
+    /* 用户取消 */
+  }
 }
 
 function goPay() {
@@ -53,22 +57,30 @@ onMounted(loadOrder)
 </script>
 
 <template>
-  <div v-if="order.id" class="order-detail" v-loading="loading">
-    <el-card>
-      <div class="order-header">
-        <h2>订单详情</h2>
-        <el-tag :type="statusMap[order.status]?.type || 'info'" size="large">
-          {{ statusMap[order.status]?.text || order.status }}
-        </el-tag>
+  <div v-if="order.id" v-loading="loading" class="order-detail fade-up">
+    <div class="page-head">
+      <div>
+        <h1>订单详情</h1>
+        <p class="sub">订单号 {{ order.orderNo }}</p>
+      </div>
+      <el-tag :type="statusMap[order.status]?.type || 'info'" size="large">
+        {{ statusMap[order.status]?.text || order.status }}
+      </el-tag>
+    </div>
+
+    <div class="panel">
+      <div class="amount-band">
+        <span class="label">应付金额</span>
+        <span class="amount">¥{{ order.totalAmount || (order.price * order.quantity) }}</span>
       </div>
 
-      <el-descriptions :column="2" border style="margin-top:20px">
+      <el-descriptions :column="2" border>
         <el-descriptions-item label="订单号">{{ order.orderNo }}</el-descriptions-item>
         <el-descriptions-item label="订单ID">{{ order.id }}</el-descriptions-item>
         <el-descriptions-item label="商品名称">{{ order.productName }}</el-descriptions-item>
-        <el-descriptions-item label="单价">&yen;{{ order.price }}</el-descriptions-item>
+        <el-descriptions-item label="单价">¥{{ order.price }}</el-descriptions-item>
         <el-descriptions-item label="数量">{{ order.quantity }}</el-descriptions-item>
-        <el-descriptions-item label="总金额">&yen;{{ order.totalAmount || (order.price * order.quantity) }}</el-descriptions-item>
+        <el-descriptions-item label="总金额">¥{{ order.totalAmount || (order.price * order.quantity) }}</el-descriptions-item>
         <el-descriptions-item label="收货地址">{{ order.shippingAddress || '未填写' }}</el-descriptions-item>
         <el-descriptions-item label="联系电话">{{ order.buyerPhone || '未填写' }}</el-descriptions-item>
         <el-descriptions-item label="备注" :span="2">{{ order.remark || '无' }}</el-descriptions-item>
@@ -76,41 +88,62 @@ onMounted(loadOrder)
         <el-descriptions-item label="支付时间">{{ order.payTime || '-' }}</el-descriptions-item>
       </el-descriptions>
 
-      <div v-if="order.shipping" style="margin-top:20px">
-        <h3>物流信息</h3>
+      <template v-if="order.shipping">
+        <div class="section-head" style="margin-top: var(--space-8)">
+          <h2>物流信息</h2>
+        </div>
         <el-descriptions :column="2" border>
           <el-descriptions-item label="快递公司">{{ order.shipping.carrier || '-' }}</el-descriptions-item>
           <el-descriptions-item label="快递单号">{{ order.shipping.trackingNo || '-' }}</el-descriptions-item>
           <el-descriptions-item label="发货时间">{{ order.shipping.shippedTime || '-' }}</el-descriptions-item>
           <el-descriptions-item label="签收时间">{{ order.shipping.deliveredTime || '-' }}</el-descriptions-item>
         </el-descriptions>
-      </div>
+      </template>
 
       <div class="actions">
-        <el-button
-          v-if="order.status === 0"
-          type="primary"
-          @click="goPay"
-        >去支付</el-button>
-        <el-button
-          v-if="order.status === 2"
-          type="success"
-          @click="handleConfirm"
-        >确认收货</el-button>
-        <el-button
-          v-if="order.status === 0"
-          type="danger"
-          @click="handleCancel"
-        >取消订单</el-button>
-        <el-button @click="router.back()">返回</el-button>
+        <button v-if="order.status === 0" class="btn btn-primary" @click="goPay">
+          <svg class="icon-sm" aria-hidden="true"><use href="#i-wallet" /></svg>
+          去支付
+        </button>
+        <button v-if="order.status === 2" class="btn btn-primary" @click="handleConfirm">
+          <svg class="icon-sm" aria-hidden="true"><use href="#i-check" /></svg>
+          确认收货
+        </button>
+        <button v-if="order.status === 0" class="btn btn-danger" @click="handleCancel">取消订单</button>
+        <button class="btn btn-subtle" @click="router.back()">返回</button>
       </div>
-    </el-card>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.order-detail { max-width: 900px; margin: 0 auto; }
-.order-header { display: flex; justify-content: space-between; align-items: center; }
-h2, h3 { margin: 0; }
-.actions { margin-top: 24px; display: flex; gap: 12px; }
+.amount-band {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-5);
+  border: 1px solid var(--green-100);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--green-50), #fff 70%);
+}
+.amount-band .label {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+.amount-band .amount {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--green-600);
+}
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-8);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
 </style>

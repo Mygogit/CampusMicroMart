@@ -56,9 +56,16 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     @Override
     @Transactional
     public boolean deductStock(Long productId, Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new BusinessException("扣减数量必须大于0");
+        }
         Product product = getById(productId);
         if (product == null) {
             throw new BusinessException("商品不存在");
+        }
+        if (!ProductStatusConstant.ON_SALE.equals(product.getProductStatus())
+                || !AuditStatusConstant.APPROVED.equals(product.getAuditStatus())) {
+            throw new BusinessException("商品不在售，无法扣减库存");
         }
         LambdaUpdateWrapper<Product> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Product::getId, productId)
@@ -85,6 +92,9 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     @Override
     @Transactional
     public boolean rollbackStock(Long productId, Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new BusinessException("回滚数量必须大于0");
+        }
         LambdaUpdateWrapper<Product> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Product::getId, productId)
                .setSql("stock = stock + {0}", quantity);
@@ -173,6 +183,23 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
                .set(Product::getProductStatus, ProductStatusConstant.SOLD);
         baseMapper.update(null, wrapper);
         log.info("商品已标记为售出, productId={}", productId);
+    }
+
+    @Override
+    public com.campus.common.feign.ProductInfo getProductInfo(Long productId) {
+        Product product = getById(productId);
+        if (product == null) {
+            throw new BusinessException("商品不存在");
+        }
+        com.campus.common.feign.ProductInfo info = new com.campus.common.feign.ProductInfo();
+        info.setId(product.getId());
+        info.setName(product.getName());
+        info.setPrice(product.getPrice());
+        info.setStock(product.getStock());
+        info.setUserId(product.getUserId());
+        info.setProductStatus(product.getProductStatus());
+        info.setAuditStatus(product.getAuditStatus());
+        return info;
     }
 
     private void sendStockAlert(Product product) {

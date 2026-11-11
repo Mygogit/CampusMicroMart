@@ -177,6 +177,16 @@ public class FrontendServer {
             if (Files.isRegularFile(file)) {
                 String ct = getContentType(file.toString());
                 exchange.getResponseHeaders().set("Content-Type", ct);
+                // index.html 不缓存，避免浏览器加载旧的 hash 资源；
+                // 带 hash 的 assets 可长期缓存（Vite 文件名内含内容 hash）
+                String p = path.toLowerCase();
+                if (p.equals("/index.html") || !p.contains("/assets/")) {
+                    exchange.getResponseHeaders().set("Cache-Control", "no-cache, no-store, must-revalidate");
+                    exchange.getResponseHeaders().set("Pragma", "no-cache");
+                    exchange.getResponseHeaders().set("Expires", "0");
+                } else {
+                    exchange.getResponseHeaders().set("Cache-Control", "public, max-age=31536000, immutable");
+                }
                 exchange.sendResponseHeaders(200, Files.size(file));
                 try (OutputStream os = exchange.getResponseBody()) {
                     Files.copy(file, os);
@@ -186,6 +196,7 @@ public class FrontendServer {
                 Path index = root.resolve("index.html");
                 if (Files.isRegularFile(index)) {
                     exchange.getResponseHeaders().set("Content-Type", "text/html;charset=UTF-8");
+                    exchange.getResponseHeaders().set("Cache-Control", "no-cache, no-store, must-revalidate");
                     exchange.sendResponseHeaders(200, Files.size(index));
                     try (OutputStream os = exchange.getResponseBody()) {
                         Files.copy(index, os);

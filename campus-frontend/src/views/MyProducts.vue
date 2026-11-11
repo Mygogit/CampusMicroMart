@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { productApi } from '../api/product'
@@ -39,7 +39,9 @@ async function handleOffShelf(id: number) {
     await productApi.offShelf(id)
     ElMessage.success('已下架')
     loadProducts()
-  } catch { /* cancelled */ }
+  } catch {
+    /* 用户取消 */
+  }
 }
 
 async function handleCancel(id: number) {
@@ -48,68 +50,91 @@ async function handleCancel(id: number) {
     await productApi.cancel(id)
     ElMessage.success('已取消')
     loadProducts()
-  } catch { /* cancelled */ }
+  } catch {
+    /* 用户取消 */
+  }
 }
 
 onMounted(loadProducts)
 </script>
 
 <template>
-  <div>
-    <div class="header">
-      <h2>我的商品</h2>
-      <el-button type="primary" @click="router.push('/products/create')">发布新商品</el-button>
+  <div class="mine-page fade-up">
+    <div class="page-head">
+      <div>
+        <h1>我的发布</h1>
+        <p class="sub">共 {{ products.length }} 件商品 · 审核通过后自动上架集市</p>
+      </div>
+      <button class="btn btn-primary" @click="router.push('/products/create')">
+        <svg class="icon-sm" aria-hidden="true"><use href="#i-plus" /></svg>
+        发布新商品
+      </button>
     </div>
 
-    <el-table v-loading="loading" :data="products" stripe>
-      <el-table-column prop="id" label="ID" width="60" />
-      <el-table-column prop="name" label="商品名称" min-width="160" />
-      <el-table-column prop="price" label="价格" width="100">
-        <template #default="{ row }">&yen;{{ row.price }}</template>
-      </el-table-column>
-      <el-table-column prop="stock" label="库存" width="80" />
-      <el-table-column label="审核状态" width="100">
-        <template #default="{ row }">
-          <el-tag :type="row.auditStatus === 1 ? 'success' : row.auditStatus === 2 ? 'danger' : 'warning'" size="small">
-            {{ auditMap[row.auditStatus] || '未知' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="商品状态" width="100">
-        <template #default="{ row }">
-          <el-tag :type="statusMap[row.productStatus]?.type || 'info'" size="small">
-            {{ statusMap[row.productStatus]?.text || '未知' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="200">
-        <template #default="{ row }">
-          <el-button size="small" @click="router.push(`/products/${row.id}`)">查看</el-button>
-          <el-button
-            v-if="row.productStatus === 1"
-            size="small"
-            type="warning"
-            @click="handleOffShelf(row.id)"
-          >下架</el-button>
-          <el-button
-            v-if="row.productStatus === 0 || row.productStatus === 1"
-            size="small"
-            type="danger"
-            @click="handleCancel(row.id)"
-          >取消</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <div v-loading="loading" class="table-wrap">
+      <el-table v-if="products.length > 0" :data="products" stripe>
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="name" label="商品名称" min-width="180" show-overflow-tooltip />
+        <el-table-column label="价格" width="110">
+          <template #default="{ row }">
+            <span class="t-price">¥{{ row.price }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="stock" label="库存" width="80" />
+        <el-table-column label="审核状态" width="110">
+          <template #default="{ row }">
+            <el-tag :type="row.auditStatus === 1 ? 'success' : row.auditStatus === 2 ? 'danger' : 'warning'" size="small">
+              {{ auditMap[row.auditStatus] || '未知' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="商品状态" width="110">
+          <template #default="{ row }">
+            <el-tag :type="statusMap[row.productStatus]?.type || 'info'" size="small">
+              {{ statusMap[row.productStatus]?.text || '未知' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="220" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" @click="router.push(`/products/${row.id}`)">查看</el-button>
+            <el-button v-if="row.productStatus === 1" size="small" type="warning" @click="handleOffShelf(row.id)">下架</el-button>
+            <el-button
+              v-if="row.productStatus === 0 || row.productStatus === 1"
+              size="small"
+              type="danger"
+              @click="handleCancel(row.id)"
+            >取消</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
+      <div v-else-if="!loading" class="empty-state">
+        <div class="art"><svg class="ic"><use href="#i-box" /></svg></div>
+        <h3>还没有发布过商品</h3>
+        <p>把宿舍里的闲置拍张照挂上来，让它找到新主人</p>
+        <button class="btn btn-primary" @click="router.push('/products/create')">发布闲置</button>
+      </div>
+      <div v-else class="table-skeleton" />
+    </div>
   </div>
 </template>
 
 <style scoped>
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+.table-wrap {
+  min-height: 220px;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
-h2 { margin: 0; }
+.table-skeleton {
+  height: 180px;
+}
+@media (max-width: 767px) {
+  .table-wrap {
+    padding: var(--space-3);
+  }
+}
 </style>

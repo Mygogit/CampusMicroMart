@@ -24,8 +24,9 @@ campus-micro-mart/
 ├── campus-common/          # 公共模块
 ├── campus-gateway/         # API网关服务 (8080)
 ├── product-service/        # 商品服务 (8081)
-├── order-service/          # 订单服务 (8082)
-├── payment-service/        # 支付模拟服务 (8083)
+├── order-service/          # 订单服务 (8083)
+├── payment-service/        # 支付模拟服务 (8085)
+├── user-service/           # 用户服务 (8084)
 ├── sql/                    # 数据库脚本
 ├── docker-compose.yml      # Docker Compose配置
 └── pom.xml                 # 父项目POM

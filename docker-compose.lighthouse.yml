@@ -1,0 +1,218 @@
+# ============================================================
+# 校园二手交易平台 - 腾讯云 Lighthouse 2核2G 部署 (服务器侧本地构建)
+# 使用: docker-compose -f docker-compose.lighthouse.yml up -d
+# 说明:
+#   - 代码从 Gitee clone 后在服务器本地构建 7 个镜像，无需外部镜像仓库
+#   - 基础镜像与依赖走腾讯云镜像源 (mirror.ccs.tencentyun.com / 腾讯 Maven 源)
+#   - 内存已按 2G 实例瘦身（含 9.9G swap 兜底），JVM 堆 200M / 容器上限 300M
+#   - MySQL 初始化 SQL 已烘焙进 campus-mysql 镜像，无需挂载 sql 目录
+#   - 前端静态资源与 nginx.conf 已烘焙进 campus-frontend 镜像
+# ============================================================
+version: '3.8'
+
+services:
+  # ======================== 基础设施 ========================
+  mysql:
+    image: campus-mysql:latest
+    container_name: campus-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - campus-mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - campus-net
+
+  redis:
+    image: redis:7.0
+    container_name: campus-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 96M
+    command: redis-server --maxmemory 80mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - campus-net
+
+  # ======================== 业务服务 ========================
+  user-service:
+    image: user-service:latest
+    container_name: campus-user
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/campus_user?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_CLOUD_SENTINEL_ENABLED: "false"
+      JAVA_TOOL_OPTIONS: "-Xms96m -Xmx200m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8084/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - campus-net
+
+  product-service:
+    image: product-service:latest
+    container_name: campus-product
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/campus_product?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_CLOUD_SENTINEL_ENABLED: "false"
+      JAVA_TOOL_OPTIONS: "-Xms96m -Xmx200m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8081/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - campus-net
+
+  order-service:
+    image: order-service:latest
+    container_name: campus-order
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/campus_order?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_CLOUD_SENTINEL_ENABLED: "false"
+      JAVA_TOOL_OPTIONS: "-Xms96m -Xmx200m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8083/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - campus-net
+
+  payment-service:
+    image: payment-service:latest
+    container_name: campus-payment
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/campus_payment?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_CLOUD_SENTINEL_ENABLED: "false"
+      JAVA_TOOL_OPTIONS: "-Xms96m -Xmx200m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8085/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - campus-net
+
+  gateway:
+    image: campus-gateway:latest
+    container_name: campus-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_CLOUD_SENTINEL_ENABLED: "false"
+      JAVA_TOOL_OPTIONS: "-Xms96m -Xmx200m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+ExitOnOutOfMemoryError"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/actuator/health | grep -q UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+    networks:
+      - campus-net
+
+  # ======================== 前端 (Nginx, 烘焙镜像) ========================
+  frontend:
+    image: campus-frontend:latest
+    container_name: campus-frontend
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - gateway
+    networks:
+      - campus-net
+
+networks:
+  campus-net:
+    driver: bridge
+
+volumes:
+  campus-mysql-data:

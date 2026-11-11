@@ -34,6 +34,9 @@ public class User implements Serializable {
 
     private java.math.BigDecimal deposit;
 
+    /** 冻结中的保证金余额 */
+    private java.math.BigDecimal frozenDeposit;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

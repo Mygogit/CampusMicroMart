@@ -1,32 +1,100 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { productApi } from '../api/product'
 import { categoryApi } from '../api/category'
 import ProductCard from '../components/ProductCard.vue'
 
-const products = ref<any[]>([])
+const PAGE_SIZE = 12
+
+const route = useRoute()
+const router = useRouter()
+
 const loading = ref(false)
 const page = ref(1)
 const total = ref(0)
+
+/** 服务端分页结果 */
+const serverProducts = ref<any[]>([])
+/** 关键字命中的本地结果（后端 /product/search 未提供 name 模糊查询，故在前端对结果集过滤） */
+const keywordHits = ref<any[]>([])
+
 const categories = ref<any[]>([])
 const categoryId = ref<number | undefined>()
 const courseCode = ref('')
 const dormitory = ref('')
+const keyword = ref(String(route.query.q || ''))
+
+const hasKeyword = computed(() => keyword.value.trim().length > 0)
+const shown = computed(() =>
+  hasKeyword.value
+    ? keywordHits.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE)
+    : serverProducts.value
+)
 
 async function loadProducts() {
   loading.value = true
   try {
-    const res = await productApi.search({
-      page: page.value,
-      size: 12,
+    const base = {
       categoryId: categoryId.value,
       courseCode: courseCode.value || undefined,
       dormitory: dormitory.value || undefined
-    })
-    products.value = res.data.data?.records || []
-    total.value = res.data.data?.total || 0
+    }
+    if (hasKeyword.value) {
+      // 关键字检索：拉取较大结果集后在本地做模糊匹配 + 分页
+      const res = await productApi.search({ page: 1, size: 100, ...base })
+      const all: any[] = res.data.data?.records || []
+      const k = keyword.value.trim().toLowerCase()
+      keywordHits.value = all.filter(
+        p =>
+          String(p.name || '').toLowerCase().includes(k) ||
+          String(p.courseCode || '').toLowerCase().includes(k) ||
+          String(p.description || '').toLowerCase().includes(k)
+      )
+      total.value = keywordHits.value.length
+    } else {
+      const res = await productApi.search({ page: page.value, size: PAGE_SIZE, ...base })
+      serverProducts.value = res.data.data?.records || []
+      total.value = res.data.data?.total || 0
+    }
   } finally {
     loading.value = false
+  }
+}
+
+function applyFilters() {
+  page.value = 1
+  loadProducts()
+}
+
+function onKeywordInput(e: Event) {
+  keyword.value = (e.target as HTMLInputElement).value
+}
+
+function selectCategory(id: number | undefined) {
+  categoryId.value = id
+  applyFilters()
+}
+
+function clearKeyword() {
+  if (route.query.q) {
+    router.push({ path: '/products', query: {} })
+  } else {
+    keyword.value = ''
+    applyFilters()
+  }
+}
+
+/** 一键重置全部筛选条件 */
+function resetFilters() {
+  categoryId.value = undefined
+  courseCode.value = ''
+  dormitory.value = ''
+  keyword.value = ''
+  if (route.query.q) {
+    router.push({ path: '/products', query: {} })
+  } else {
+    applyFilters()
   }
 }
 
@@ -35,232 +103,200 @@ function onPageChange(p: number) {
   loadProducts()
 }
 
+watch(
+  () => route.query.q,
+  v => {
+    keyword.value = String(v || '')
+    applyFilters()
+  }
+)
+
 onMounted(() => {
   loadProducts()
-  categoryApi.list().then(res => {
-    categories.value = res.data.data || []
-  }).catch(() => {})
+  categoryApi
+    .list()
+    .then(res => {
+      categories.value = res.data.data || []
+    })
+    .catch(() => {})
 })
 </script>
 
 <template>
-  <div class="product-list-page">
-    <div class="page-header">
-      <h1 class="page-title">
-        <el-icon><Shop /></el-icon>
-        商品集市
-      </h1>
-      <p class="page-subtitle">发现你想要的，开始校园购物之旅</p>
+  <div class="list-page fade-up">
+    <div class="page-head">
+      <div>
+        <h1>商品集市</h1>
+        <p class="sub">
+          <template v-if="hasKeyword">
+            「{{ keyword }}」的搜索结果，共 {{ total }} 件
+          </template>
+          <template v-else>发现你想要的，开始校园购物之旅</template>
+        </p>
+      </div>
+      <button class="btn btn-primary" @click="router.push('/products/create')">
+        <svg class="icon-sm" aria-hidden="true"><use href="#i-plus" /></svg>
+        发布闲置
+      </button>
     </div>
 
-    <div class="search-section">
-      <div class="search-wrapper">
-        <div class="search-input-group">
-          <el-select v-model="categoryId" placeholder="全部分类" clearable size="large" class="search-select" @change="loadProducts">
-            <el-option
-              v-for="cat in categories"
-              :key="cat.id"
-              :label="cat.name"
-              :value="cat.id"
-            />
-          </el-select>
-          <el-input v-model="courseCode" placeholder="课程代码" size="large" class="search-input" @change="loadProducts">
-            <template #prefix><el-icon><Document /></el-icon></template>
-          </el-input>
-          <el-input v-model="dormitory" placeholder="宿舍楼栋" size="large" class="search-input" @change="loadProducts">
-            <template #prefix><el-icon><LocationFilled /></el-icon></template>
-          </el-input>
-        </div>
-        <el-button type="primary" size="large" @click="loadProducts" class="search-btn">
-          <el-icon><Search /></el-icon>
-          搜索
-        </el-button>
-      </div>
+    <!-- 分类快捷筛选 -->
+    <div class="chip-group" role="group" aria-label="商品分类">
+      <button class="chip" :class="{ active: categoryId === undefined }" @click="selectCategory(undefined)">全部</button>
+      <button
+        v-for="cat in categories"
+        :key="cat.id"
+        class="chip"
+        :class="{ active: categoryId === cat.id }"
+        @click="selectCategory(cat.id)"
+      >
+        {{ cat.name }}
+      </button>
     </div>
 
-    <div v-if="products.length === 0 && !loading" class="empty-state">
-      <div class="empty-icon">
-        <el-icon><Box /></el-icon>
-      </div>
-      <h3>暂无商品</h3>
-      <p>换个搜索条件试试吧</p>
-    </div>
-
-    <div v-else class="product-section">
-      <div class="product-info-bar">
-        <span class="product-count">
-          <el-icon><Goods /></el-icon>
-          共 {{ total }} 件商品
-        </span>
-      </div>
-
-      <div v-loading="loading" class="product-grid">
-        <ProductCard v-for="p in products" :key="p.id" :product="p" />
-      </div>
-
-      <div v-if="total > 12" class="pagination-wrapper">
-        <el-pagination
-          layout="prev, pager, next"
-          :total="total"
-          :page-size="12"
-          :current-page="page"
-          @current-change="onPageChange"
+    <!-- 精细筛选 -->
+    <div class="filter-bar">
+      <div class="filter-field">
+        <svg class="icon-sm" aria-hidden="true"><use href="#i-search" /></svg>
+        <input
+          :value="keyword"
+          class="input"
+          type="search"
+          placeholder="搜索商品名称"
+          aria-label="搜索商品名称"
+          @input="onKeywordInput"
+          @keydown.enter="applyFilters"
         />
+        <button v-if="hasKeyword" class="filter-clear" type="button" aria-label="清除关键字" @click="clearKeyword">
+          <svg class="icon-sm" aria-hidden="true"><use href="#i-x" /></svg>
+        </button>
       </div>
+      <div class="filter-field">
+        <svg class="icon-sm" aria-hidden="true"><use href="#i-book" /></svg>
+        <input v-model="courseCode" class="input" placeholder="课程代码" aria-label="课程代码" @keydown.enter="applyFilters" />
+      </div>
+      <div class="filter-field">
+        <svg class="icon-sm" aria-hidden="true"><use href="#i-pin" /></svg>
+        <input v-model="dormitory" class="input" placeholder="宿舍楼栋" aria-label="宿舍楼栋" @keydown.enter="applyFilters" />
+      </div>
+      <button class="btn btn-primary" @click="applyFilters">
+        <svg class="icon-sm" aria-hidden="true"><use href="#i-search" /></svg>
+        搜索
+      </button>
+    </div>
+
+    <div class="result-bar">
+      <span class="result-count">
+        <svg class="icon-sm" aria-hidden="true"><use href="#i-grid" /></svg>
+        共 {{ total }} 件商品
+      </span>
+    </div>
+
+    <div v-loading="loading" class="grid-area">
+      <div v-if="shown.length === 0 && !loading" class="empty-state">
+        <div class="art"><svg class="ic"><use href="#i-inbox" /></svg></div>
+        <h3>没有找到相关商品</h3>
+        <p>换个关键字或放宽筛选条件试试</p>
+        <button class="btn btn-ghost" @click="resetFilters">重置筛选</button>
+      </div>
+
+      <div v-else class="cm-grid">
+        <ProductCard v-for="p in shown" :key="p.id" :product="p" />
+      </div>
+    </div>
+
+    <div v-if="total > PAGE_SIZE" class="pagination-wrapper">
+      <el-pagination
+        layout="prev, pager, next"
+        :total="total"
+        :page-size="PAGE_SIZE"
+        :current-page="page"
+        @current-change="onPageChange"
+      />
     </div>
   </div>
 </template>
 
 <style scoped>
-.product-list-page {
-  width: 100%;
+/* ---------- 分类与筛选 ---------- */
+.chip-group {
+  margin-bottom: var(--space-5);
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  margin: 0 0 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.filter-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-
-.page-title .el-icon {
-  font-size: 36px;
-}
-
-.page-subtitle {
-  color: #909399;
-  font-size: 15px;
-  margin: 0;
-}
-
-.search-section {
-  margin-bottom: 32px;
-}
-
-.search-wrapper {
-  background: white;
-  padding: 24px;
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  display: flex;
-  gap: 16px;
-  align-items: center;
+  gap: var(--space-3);
   flex-wrap: wrap;
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
-
-.search-input-group {
+.filter-field {
+  position: relative;
+  flex: 1;
+  min-width: 180px;
   display: flex;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
+  align-items: center;
 }
-
-.search-select {
-  min-width: 160px;
+.filter-field > .icon-sm {
+  position: absolute;
+  left: 13px;
+  color: var(--text-subtle);
+  pointer-events: none;
 }
-
-.search-input {
-  flex: 1;
-  min-width: 140px;
+.filter-field .input {
+  padding-left: 38px;
 }
-
-.search-btn {
-  height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.filter-clear {
+  position: absolute;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
   border: none;
-  font-weight: 600;
-  padding: 0 24px;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  transition: all 0.3s;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text-subtle);
+}
+.filter-clear:hover {
+  background: var(--border);
+  color: var(--text);
 }
 
-.search-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-}
-
-.empty-state {
-  text-align: center;
-  padding: 80px 40px;
-}
-
-.empty-icon {
-  width: 120px;
-  height: 120px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
-  border-radius: 50%;
+/* ---------- 结果区 ---------- */
+.result-bar {
   display: flex;
   align-items: center;
-  justify-content: center;
-  margin: 0 auto 24px;
-}
-
-.empty-icon .el-icon {
-  font-size: 56px;
-  color: #909399;
-}
-
-.empty-state h3 {
-  font-size: 20px;
-  color: #606266;
-  margin: 0 0 8px;
-  font-weight: 600;
-}
-
-.empty-state p {
-  color: #909399;
-  font-size: 14px;
-  margin: 0;
-}
-
-.product-section {
-  width: 100%;
-}
-
-.product-info-bar {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-4);
 }
-
-.product-count {
-  display: flex;
+.result-count {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #606266;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
   font-weight: 600;
-  font-size: 14px;
 }
-
-.product-count .el-icon {
-  color: #667eea;
+.grid-area {
+  min-height: 200px;
 }
-
-.product-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
-}
-
 .pagination-wrapper {
   display: flex;
   justify-content: center;
-  margin-top: 40px;
-  padding-top: 24px;
-  border-top: 1px solid #ebeef5;
+  margin-top: var(--space-10);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 767px) {
+  .filter-field {
+    min-width: 100%;
+  }
 }
 </style>

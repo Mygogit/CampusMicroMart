@@ -1,26 +1,21 @@
 <script setup lang="ts">
+import IconSprite from './components/IconSprite.vue'
 </script>
 
 <template>
+  <IconSprite />
   <router-view />
 </template>
 
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  background-attachment: fixed;
+/* 全局仅保留最小必要样式，主题细节见 src/styles/ */
+html,
+body,
+#app {
   min-height: 100vh;
 }
 
 #app {
-  min-height: 100vh;
+  isolation: isolate;
 }
 </style>

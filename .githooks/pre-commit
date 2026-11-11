@@ -1,0 +1,28 @@
+#!/bin/sh
+# 保守密钥扫描: 仅阻断高置信度密钥, 避免误报打扰协作。
+# 若确属误报, 在对应文件中加注释 # skip-secret-scan 后重试。
+
+scan() {
+  for file in $(git diff --cached --name-only --diff-filter=ACM); do
+    [ -z "$file" ] && continue
+    content=$(git show ":${file}" 2>/dev/null)
+    if echo "$content" | grep -q "skip-secret-scan"; then
+      continue
+    fi
+    if echo "$content" | grep -nE -e "$1" >/dev/null; then
+      hit=$(echo "$content" | grep -nE -e "$1" | head -1)
+      echo "[!] 疑似密钥命中: $file" >&2
+      echo "    $hit" >&2
+      echo "    确认误报请在文件中加注释 # skip-secret-scan 后重试" >&2
+      exit 1
+    fi
+  done
+}
+
+scan '-----BEGIN (RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----'
+scan 'AKIA[0-9A-Z]{16}'
+scan 'AWS_ACCESS_KEY_ID=[A-Z0-9]{16}'
+scan 'ghp_[A-Za-z0-9]{36}'
+scan 'github_pat_[A-Za-z0-9_]{40,}'
+
+exit 0

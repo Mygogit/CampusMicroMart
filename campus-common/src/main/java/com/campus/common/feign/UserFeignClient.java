@@ -18,4 +18,10 @@ public interface UserFeignClient {
 
     @PostMapping("/deposit/deduct")
     Result<Boolean> deductDeposit(@RequestParam("userId") Long userId, @RequestParam("amount") BigDecimal amount);
+
+    /**
+     * 结算：给卖家入账（确认收货后由 order-service 调用）。
+     */
+    @PostMapping("/deposit/credit")
+    Result<Boolean> creditDeposit(@RequestParam("userId") Long userId, @RequestParam("amount") BigDecimal amount);
 }

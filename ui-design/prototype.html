@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>校园集市 CampusMicroMart · UI 原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    /* ---- 主色 新生绿 ---- */
+    --green-50: oklch(0.97 0.02 155);
+    --green-100: oklch(0.93 0.05 155);
+    --green-300: oklch(0.82 0.11 155);
+    --green-500: oklch(0.68 0.14 155);
+    --green-600: oklch(0.60 0.14 155);
+    --green-700: oklch(0.52 0.13 155);
+    /* ---- 暖中性 ---- */
+    --bg: oklch(0.985 0.004 150);
+    --surface: oklch(1 0 0);
+    --surface-2: oklch(0.975 0.004 150);
+    --border: oklch(0.92 0.006 150);
+    --text: oklch(0.24 0.02 155);
+    --text-muted: oklch(0.52 0.02 155);
+    --text-subtle: oklch(0.66 0.02 155);
+    /* ---- 强调 ---- */
+    --coral-500: oklch(0.72 0.16 35);
+    --coral-50: oklch(0.96 0.04 35);
+    --amber-500: oklch(0.78 0.14 75);
+    /* ---- 语义 ---- */
+    --success: oklch(0.70 0.15 150);
+    --warning: oklch(0.78 0.14 75);
+    --danger: oklch(0.62 0.20 25);
+    /* ---- 字体 ---- */
+    --font-display:'Sora','PingFang SC','Microsoft YaHei',sans-serif;
+    --font-body:'Manrope','PingFang SC','Microsoft YaHei',sans-serif;
+    --fs-display: clamp(28px,3vw,40px);
+    --fs-h1: clamp(22px,2vw,28px);
+    --fs-h2: 20px;
+    --fs-base: 16px;
+    --fs-sm: 14px;
+    --fs-xs: 12px;
+    /* ---- 间距 ---- */
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+    --space-5:20px; --space-6:24px; --space-8:32px; --space-10:40px;
+    --space-12:48px; --space-16:64px;
+    /* ---- 圆角 ---- */
+    --radius-sm:10px; --radius:14px; --radius-lg:20px; --radius-pill:999px;
+    /* ---- 阴影 ---- */
+    --shadow-sm: 0 1px 2px oklch(0.3 0.02 155/0.04), 0 1px 3px oklch(0.3 0.02 155/0.06);
+    --shadow-md: 0 4px 12px oklch(0.3 0.02 155/0.07);
+    --shadow-lg: 0 12px 32px oklch(0.3 0.02 155/0.10);
+    /* ---- 动效 ---- */
+    --ease: cubic-bezier(0.22,1,0.36,1);
+    --dur-fast:160ms; --dur:280ms;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--font-body);
+    color:var(--text);
+    background:var(--bg);
+    font-size:var(--fs-base);
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:var(--font-display);line-height:1.2;font-weight:600;letter-spacing:-0.01em}
+  a{color:inherit;text-decoration:none}
+  button{font-family:inherit;cursor:pointer}
+  :focus-visible{outline:2px solid var(--green-500);outline-offset:2px;border-radius:4px}
+  .icon{width:20px;height:20px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .icon-sm{width:16px;height:16px}
+
+  /* ---------- 布局 ---------- */
+  .app{display:flex;min-height:100vh}
+  .sidebar{
+    width:248px;flex:none;background:var(--surface);
+    border-right:1px solid var(--border);
+    display:flex;flex-direction:column;padding:var(--space-6) var(--space-4);
+    position:sticky;top:0;height:100vh;
+  }
+  .brand{display:flex;align-items:center;gap:var(--space-3);padding:0 var(--space-2) var(--space-6)}
+  .brand-mark{
+    width:40px;height:40px;border-radius:12px;flex:none;
+    background:linear-gradient(140deg,var(--green-500),var(--green-300));
+    display:grid;place-items:center;color:#fff;box-shadow:var(--shadow-sm);
+  }
+  .brand-name{font-family:var(--font-display);font-weight:700;font-size:17px}
+  .brand-sub{font-size:var(--fs-xs);color:var(--text-subtle);letter-spacing:.04em}
+  .nav{display:flex;flex-direction:column;gap:4px;margin-top:var(--space-2)}
+  .nav-item{
+    display:flex;align-items:center;gap:var(--space-3);
+    padding:var(--space-3) var(--space-3);border-radius:var(--radius-sm);
+    color:var(--text-muted);font-weight:500;font-size:var(--fs-sm);
+    transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease);
+    border:none;background:none;width:100%;text-align:left;
+  }
+  .nav-item:hover{background:var(--surface-2);color:var(--text)}
+  .nav-item.active{background:var(--green-50);color:var(--green-700);font-weight:600}
+  .nav-item.active .icon{color:var(--green-600)}
+  .sidebar-foot{margin-top:auto;display:flex;align-items:center;gap:var(--space-3);
+    padding:var(--space-3);border-radius:var(--radius-sm);background:var(--surface-2)}
+  .avatar{
+    width:36px;height:36px;border-radius:var(--radius-pill);flex:none;
+    background:linear-gradient(140deg,var(--green-300),var(--green-500));
+    color:#fff;display:grid;place-items:center;font-weight:600;font-size:13px;
+  }
+  .avatar.lg{width:64px;height:64px;font-size:22px}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{
+    position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 85%,transparent);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-8);
+  }
+  .search{position:relative;flex:1;max-width:520px}
+  .search .icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-subtle)}
+  .search input{
+    width:100%;height:42px;border:1px solid var(--border);border-radius:var(--radius-pill);
+    background:var(--surface-2);padding:0 16px 0 44px;font-size:var(--fs-sm);color:var(--text);
+    transition:border var(--dur-fast),box-shadow var(--dur-fast);
+  }
+  .search input:focus{outline:none;border-color:var(--green-500);box-shadow:0 0 0 3px var(--green-50);background:var(--surface)}
+  .topbar-actions{display:flex;align-items:center;gap:var(--space-3);margin-left:auto}
+  .icon-btn{
+    width:42px;height:42px;border-radius:var(--radius-pill);border:1px solid var(--border);
+    background:var(--surface);display:grid;place-items:center;color:var(--text-muted);
+    transition:all var(--dur-fast) var(--ease);position:relative;
+  }
+  .icon-btn:hover{color:var(--green-600);border-color:var(--green-300)}
+  .icon-btn .dot{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--coral-500);border:2px solid var(--surface)}
+
+  .content{padding:var(--space-8);max-width:1200px;width:100%;margin:0 auto}
+  .screen{display:none;animation:fade var(--dur) var(--ease)}
+  .screen.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ---------- 通用组件 ---------- */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);
+    height:42px;padding:0 20px;border-radius:var(--radius-sm);border:none;
+    font-weight:600;font-size:var(--fs-sm);transition:all var(--dur-fast) var(--ease);
+  }
+  .btn-primary{background:var(--green-500);color:#fff}
+  .btn-primary:hover{background:var(--green-600);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+  .btn-ghost{background:transparent;color:var(--green-700);border:1px solid var(--green-300)}
+  .btn-ghost:hover{background:var(--green-50)}
+  .btn-subtle{background:var(--surface-2);color:var(--text-muted)}
+  .btn-subtle:hover{background:var(--border);color:var(--text)}
+  .btn.sm{height:34px;padding:0 14px;font-size:var(--fs-xs)}
+  .btn.lg{height:48px;padding:0 26px;font-size:var(--fs-base)}
+  .btn:disabled{opacity:.55;pointer-events:none}
+
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;
+    border-radius:var(--radius-pill);background:var(--surface-2);color:var(--text-muted);
+    font-size:var(--fs-xs);font-weight:500;border:1px solid transparent;transition:all var(--dur-fast);
+  }
+  .chip:hover{color:var(--text);border-color:var(--border)}
+  .chip.active{background:var(--green-50);color:var(--green-700);border-color:var(--green-300)}
+  .chip-group{display:flex;gap:var(--space-2);flex-wrap:wrap}
+
+  .badge{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:var(--radius-pill);font-size:var(--fs-xs);font-weight:600}
+  .badge.green{background:var(--green-50);color:var(--green-700)}
+  .badge.coral{background:var(--coral-50);color:var(--coral-500)}
+  .badge.amber{background:color-mix(in srgb,var(--amber-500) 16%,#fff);color:oklch(0.55 0.12 75)}
+  .badge.gray{background:var(--surface-2);color:var(--text-muted)}
+  .badge .ic{width:13px;height:13px}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden;transition:all var(--dur) var(--ease)}
+  .card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+
+  /* ---------- 首页 ---------- */
+  .hero{
+    background:linear-gradient(135deg,var(--green-50),#fff 60%);
+    border:1px solid var(--green-100);border-radius:var(--radius-lg);
+    padding:var(--space-10);display:flex;align-items:center;gap:var(--space-8);margin-bottom:var(--space-8);
+  }
+  .hero h1{font-size:var(--fs-display);max-width:14ch}
+  .hero p{color:var(--text-muted);margin:var(--space-4) 0 var(--space-6);max-width:42ch}
+  .hero-art{flex:none;width:160px;height:160px;border-radius:var(--radius-lg);
+    background:linear-gradient(140deg,var(--green-500),var(--green-300));display:grid;place-items:center;color:#fff;box-shadow:var(--shadow-md)}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;margin:var(--space-8) 0 var(--space-4)}
+  .section-head h2{font-size:var(--fs-h1)}
+  .link-more{color:var(--green-600);font-weight:600;font-size:var(--fs-sm);display:inline-flex;align-items:center;gap:4px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--space-5)}
+  .product{padding:0}
+  .product .thumb{
+    aspect-ratio:16/10;display:grid;place-items:center;color:#fff;position:relative;overflow:hidden;
+    background:linear-gradient(140deg,var(--green-300),var(--green-500));
+  }
+  .product:nth-child(2n) .thumb{background:linear-gradient(140deg,#9ad0ff,var(--green-300))}
+  .product:nth-child(3n) .thumb{background:linear-gradient(140deg,var(--coral-500),var(--amber-500))}
+  .product:nth-child(4n) .thumb{background:linear-gradient(140deg,var(--green-500),#7fd9b4)}
+  .product .thumb .ic{width:48px;height:48px;opacity:.9}
+  .product .thumb .badge{position:absolute;top:10px;left:10px}
+  .product .body{padding:var(--space-4)}
+  .product .title{font-weight:600;font-size:var(--fs-sm);display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+  .product .meta{display:flex;align-items:center;justify-content:space-between;margin-top:var(--space-2)}
+  .product .price{font-family:var(--font-display);font-weight:700;color:var(--green-600);font-size:18px}
+  .product .price small{font-size:11px;font-weight:500;color:var(--text-subtle)}
+  .product .seller{display:flex;align-items:center;gap:6px;color:var(--text-subtle);font-size:var(--fs-xs);margin-top:var(--space-3)}
+  .product .seller .avatar{width:20px;height:20px;font-size:9px}
+
+  /* ---------- 详情 ---------- */
+  .detail{display:grid;grid-template-columns:1.1fr 1fr;gap:var(--space-10);align-items:start}
+  .gallery .main-img{aspect-ratio:4/3;border-radius:var(--radius-lg);display:grid;place-items:center;color:#fff;
+    background:linear-gradient(140deg,var(--green-500),var(--green-300));box-shadow:var(--shadow-md)}
+  .gallery .main-img .ic{width:72px;height:72px;opacity:.9}
+  .gallery .thumbs{display:flex;gap:var(--space-3);margin-top:var(--space-3)}
+  .gallery .thumbs .t{width:72px;height:72px;border-radius:var(--radius-sm);border:2px solid transparent;background:var(--surface-2);display:grid;place-items:center;color:var(--text-subtle)}
+  .gallery .thumbs .t.on{border-color:var(--green-500);color:var(--green-600)}
+  .crumbs{display:flex;align-items:center;gap:6px;color:var(--text-subtle);font-size:var(--fs-xs);margin-bottom:var(--space-4)}
+  .detail h1{font-size:var(--fs-display)}
+  .detail .price-row{display:flex;align-items:baseline;gap:var(--space-3);margin:var(--space-4) 0}
+  .detail .price-row .price{font-family:var(--font-display);font-size:34px;font-weight:700;color:var(--green-600)}
+  .detail .desc{color:var(--text-muted);margin:var(--space-4) 0;line-height:1.7}
+  .spec{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-3);margin:var(--space-5) 0}
+  .spec .row{display:flex;justify-content:space-between;padding:var(--space-3);background:var(--surface-2);border-radius:var(--radius-sm);font-size:var(--fs-sm)}
+  .spec .row span:first-child{color:var(--text-subtle)}
+  .seller-card{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-4);border:1px dashed var(--border);border-radius:var(--radius);margin:var(--space-5) 0}
+  .buy-row{display:flex;gap:var(--space-3);margin-top:var(--space-5)}
+  .buy-row .btn{flex:1}
+
+  /* ---------- 发布 ---------- */
+  .publish{max-width:720px}
+  .field{margin-bottom:var(--space-5)}
+  .field label{display:block;font-weight:600;font-size:var(--fs-sm);margin-bottom:var(--space-2)}
+  .field .hint{color:var(--text-subtle);font-size:var(--fs-xs);font-weight:400;margin-left:6px}
+  .input{width:100%;height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);padding:0 14px;font-size:var(--fs-sm);color:var(--text);font-family:inherit;transition:border var(--dur-fast),box-shadow var(--dur-fast)}
+  .input:focus{outline:none;border-color:var(--green-500);box-shadow:0 0 0 3px var(--green-50);background:var(--surface)}
+  textarea.input{height:auto;padding:12px 14px;resize:vertical;min-height:110px;line-height:1.6}
+  .dropzone{border:2px dashed var(--border);border-radius:var(--radius);padding:var(--space-8);text-align:center;color:var(--text-subtle);background:var(--surface-2);transition:all var(--dur-fast);cursor:pointer}
+  .dropzone:hover,.dropzone.drag{border-color:var(--green-500);background:var(--green-50);color:var(--green-700)}
+  .dropzone .ic{width:36px;height:36px;margin:0 auto var(--space-3);color:var(--green-500)}
+  .seg{display:flex;gap:var(--space-2);flex-wrap:wrap}
+
+  /* ---------- 个人中心 / 订单 ---------- */
+  .profile-head{display:flex;align-items:center;gap:var(--space-5);padding:var(--space-8);background:linear-gradient(135deg,var(--green-50),#fff);border:1px solid var(--green-100);border-radius:var(--radius-lg);margin-bottom:var(--space-6)}
+  .profile-head .info h1{font-size:var(--fs-h1)}
+  .profile-head .info p{color:var(--text-muted);font-size:var(--fs-sm);margin-top:4px}
+  .stats{display:flex;gap:var(--space-8);margin-left:auto}
+  .stat{text-align:center}
+  .stat b{font-family:var(--font-display);font-size:24px;display:block;color:var(--green-700)}
+  .stat span{font-size:var(--fs-xs);color:var(--text-subtle)}
+  .tabs{display:flex;gap:var(--space-1);border-bottom:1px solid var(--border);margin-bottom:var(--space-5)}
+  .tab{padding:var(--space-3) var(--space-4);background:none;border:none;color:var(--text-muted);font-weight:600;font-size:var(--fs-sm);border-bottom:2px solid transparent;transition:color var(--dur-fast)}
+  .tab.active{color:var(--green-700);border-color:var(--green-500)}
+  .tab:hover{color:var(--text)}
+  .order{display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:var(--space-3);transition:background var(--dur-fast)}
+  .order:hover{background:var(--green-50)}
+  .order .thumb{width:64px;height:64px;border-radius:var(--radius-sm);flex:none;display:grid;place-items:center;color:#fff;background:linear-gradient(140deg,var(--green-400,var(--green-500)),var(--green-300))}
+  .order .thumb .ic{width:28px;height:28px}
+  .order .tt{flex:1;min-width:0}
+  .order .tt .t{font-weight:600;font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .order .tt .m{color:var(--text-subtle);font-size:var(--fs-xs);margin-top:2px}
+  .order .amt{font-family:var(--font-display);font-weight:700;color:var(--green-600)}
+
+  /* ---------- 登录注册 ---------- */
+  .auth{display:none}
+  .auth.active{display:flex;min-height:100vh}
+  .auth .aside{width:42%;background:linear-gradient(160deg,var(--green-600),var(--green-300));color:#fff;padding:var(--space-12);display:flex;flex-direction:column;justify-content:space-between}
+  .auth .aside h2{font-size:34px;color:#fff;max-width:12ch}
+  .auth .aside p{opacity:.9;margin-top:var(--space-4);max-width:34ch}
+  .auth .aside .big{width:120px;height:120px;border-radius:var(--radius-lg);background:rgba(255,255,255,.16);display:grid;place-items:center;margin-top:var(--space-8)}
+  .auth .aside .big .ic{width:64px;height:64px}
+  .auth .panel{flex:1;display:grid;place-items:center;padding:var(--space-8)}
+  .auth .form{width:min(380px,100%)}
+  .auth .form h1{font-size:var(--fs-h1);margin-bottom:var(--space-2)}
+  .auth .form .sub{color:var(--text-muted);font-size:var(--fs-sm);margin-bottom:var(--space-6)}
+  .auth-toggle{display:flex;background:var(--surface-2);border-radius:var(--radius-pill);padding:4px;margin-bottom:var(--space-6)}
+  .auth-toggle button{flex:1;height:38px;border:none;background:none;border-radius:var(--radius-pill);font-weight:600;font-size:var(--fs-sm);color:var(--text-muted);transition:all var(--dur-fast)}
+  .auth-toggle button.on{background:var(--surface);color:var(--green-700);box-shadow:var(--shadow-sm)}
+
+  /* ---------- 登录/注册屏（screen-login） ---------- */
+  .screen#screen-login{padding-top:0}
+  .login-wrap{display:grid;place-items:center;min-height:calc(100vh - 130px);padding:var(--space-8) var(--space-4)}
+  .login-card{width:100%;max-width:460px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);padding:var(--space-10) var(--space-8)}
+  .login-card > h1{font-size:var(--fs-h1);margin-bottom:6px}
+  .login-sub{color:var(--text-muted);font-size:var(--fs-sm);margin-bottom:var(--space-6)}
+
+  .auth-tabs{display:flex;background:var(--surface-2);border-radius:var(--radius-pill);padding:4px;margin-bottom:var(--space-6);gap:0}
+  .auth-tab{flex:1;height:40px;border:none;background:none;border-radius:var(--radius-pill);font-weight:600;font-size:var(--fs-sm);color:var(--text-muted);transition:all var(--dur-fast) var(--ease);cursor:pointer}
+  .auth-tab:hover{color:var(--text)}
+  .auth-tab[aria-selected="true"]{background:var(--surface);color:var(--green-700);box-shadow:var(--shadow-sm)}
+
+  .input-wrap{position:relative;margin-bottom:var(--space-4)}
+  .input-wrap .input-pre{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-subtle);pointer-events:none}
+  .input-wrap .input-suf{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:var(--radius-sm);background:none;border:none;display:grid;place-items:center;color:var(--text-subtle);transition:all var(--dur-fast) var(--ease);cursor:pointer}
+  .input-wrap .input-suf:hover{color:var(--green-600);background:var(--green-50)}
+  .input.has-icon{padding-left:46px}
+  .input.has-suf{padding-right:50px}
+
+  .field-compact{margin-bottom:var(--space-4)}
+  .field-compact label{display:block;font-weight:600;font-size:var(--fs-sm);margin-bottom:6px}
+  .field-compact .hint{color:var(--text-subtle);font-size:var(--fs-xs);font-weight:400;margin-top:6px;margin-left:0}
+  .req{color:var(--danger);margin-left:3px}
+
+  .login-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-5);font-size:var(--fs-sm)}
+  .remember{display:inline-flex;align-items:center;gap:8px;color:var(--text-muted);cursor:pointer;user-select:none}
+  .remember input{accent-color:var(--green-500);width:16px;height:16px;cursor:pointer}
+  .forgot{color:var(--green-600);font-weight:600}
+  .forgot:hover{text-decoration:underline}
+
+  .pwd-strength{display:flex;gap:6px;align-items:center;margin-top:8px;font-size:var(--fs-xs);color:var(--text-subtle)}
+  .pwd-strength > i{flex:1;height:5px;border-radius:3px;background:var(--border);transition:background var(--dur-fast) var(--ease)}
+  .pwd-strength > em{font-style:normal;font-weight:600;color:var(--text-subtle);min-width:18px;text-align:right;letter-spacing:.05em}
+  .pwd-strength[data-level="1"] > i:nth-child(1){background:var(--coral-500)}
+  .pwd-strength[data-level="1"] > em{color:var(--coral-500)}
+  .pwd-strength[data-level="2"] > i:nth-child(1),.pwd-strength[data-level="2"] > i:nth-child(2){background:var(--amber-500)}
+  .pwd-strength[data-level="2"] > em{color:var(--amber-500)}
+  .pwd-strength[data-level="3"] > i{background:var(--green-500)}
+  .pwd-strength[data-level="3"] > em{color:var(--green-700)}
+
+  .agree{display:flex;align-items:flex-start;gap:8px;font-size:var(--fs-sm);color:var(--text-muted);margin-bottom:var(--space-5);line-height:1.5;cursor:pointer}
+  .agree input{accent-color:var(--green-500);width:16px;height:16px;margin-top:3px;flex:none;cursor:pointer}
+  .agree a{color:var(--green-600);font-weight:600}
+  .agree a:hover{text-decoration:underline}
+
+  .auth-foot{text-align:center;color:var(--text-muted);font-size:var(--fs-sm);margin-top:var(--space-5);margin-bottom:0}
+  .auth-foot a{color:var(--green-600);font-weight:600}
+  .auth-foot a:hover{text-decoration:underline}
+
+  /* 顶栏登录态 */
+  body.is-auth .search input{background:repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2) 6px,var(--bg) 6px,var(--bg) 12px);cursor:not-allowed;color:var(--text-subtle)}
+  body.is-auth .search input::placeholder{color:var(--text-subtle)}
+  body.is-auth .topbar-actions .icon-btn{cursor:not-allowed;opacity:.7}
+  body.is-auth .topbar-actions .icon-btn:hover{color:var(--text-muted);border-color:var(--border);background:var(--surface)}
+
+  /* ---------- 设计规范 ---------- */
+  .sys-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--space-4)}
+  .swatch{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
+  .swatch .c{height:72px}
+  .swatch .meta{padding:var(--space-3);font-size:var(--fs-xs)}
+  .swatch .meta b{display:block;font-family:var(--font-display)}
+  .swatch .meta code{color:var(--text-subtle)}
+  .type-row{display:flex;align-items:baseline;gap:var(--space-5);padding:var(--space-4) 0;border-bottom:1px solid var(--border)}
+  .type-row .lab{width:120px;color:var(--text-subtle);font-size:var(--fs-xs);flex:none}
+  .type-row .samp{font-family:var(--font-display)}
+
+  /* ---------- Toast ---------- */
+  .toast{position:fixed;right:24px;bottom:24px;background:var(--text);color:#fff;padding:var(--space-3) var(--space-5);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:var(--space-2);font-size:var(--fs-sm);opacity:0;transform:translateY(10px);transition:all var(--dur) var(--ease);z-index:60;pointer-events:none}
+  .toast.show{opacity:1;transform:none}
+  .toast .ic{color:var(--green-300)}
+
+  @media (max-width:1023px){.sidebar{width:72px;padding:var(--space-6) var(--space-2)}
+    .brand-name,.brand-sub,.nav-item span,.sidebar-foot span{display:none}.nav-item{justify-content:center}
+    .sidebar-foot{justify-content:center}.content{padding:var(--space-6)}.topbar{padding:var(--space-4) var(--space-6)}}
+  @media (max-width:767px){.sidebar{position:fixed;bottom:0;left:0;right:0;top:auto;width:100%;height:auto;flex-direction:row;justify-content:space-around;padding:8px;border-right:none;border-top:1px solid var(--border);z-index:50}
+    .brand,.sidebar-foot{display:none}.nav{flex-direction:row;gap:0;margin:0}.nav-item{flex-direction:column;gap:2px;font-size:10px;padding:6px 10px}
+    .content{padding:var(--space-4);padding-bottom:88px}.topbar{padding:var(--space-3) var(--space-4)}
+    .detail{grid-template-columns:1fr}.hero{flex-direction:column;text-align:center}.auth.active{flex-direction:column}
+    .auth .aside{width:100%}.stats{margin-left:0}
+    .login-wrap{min-height:calc(100vh - 80px);padding:var(--space-5) var(--space-3)}
+    .login-card{max-width:100%;padding:var(--space-8) var(--space-5);border-radius:var(--radius)}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- SVG 图标精灵 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M19 19H6a2 2 0 0 0-2 2"/></symbol>
+  <symbol id="i-bike" viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17l4-7h5l3 7M10 10l2-4h3"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></symbol>
+  <symbol id="i-shirt" viewBox="0 0 24 24"><path d="M8 3l4 3 4-3 4 4-3 3v8H7v-8L4 7z"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M8 7l1.5-3h5L16 7"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M3 4h2l2.5 12h11l2-8H6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.7 5.5 6 .9-4.3 4.2 1 6L12 17l-5.4 2.6 1-6L3.3 9.4l6-.9z"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19c0-8 6-13 14-13 0 8-6 14-14 13z"/><path d="M5 19c4-4 7-7 10-9"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.5 6.3A10.6 10.6 0 0 1 12 6c6.5 0 10 6 10 6a14 14 0 0 1-3 3.7"/><path d="M6.6 6.7A14 14 0 0 0 2 12s3.5 6 10 6a10.5 10.5 0 0 0 4.5-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.5 8-8 9-4.5-1-8-4.5-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></symbol>
+</svg>
+
+<div class="app" id="app">
+  <!-- 侧边栏 -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><svg class="icon"><use href="#i-leaf"/></svg></div>
+      <div>
+        <div class="brand-name">校园集市</div>
+        <div class="brand-sub">CAMPUS MICROMART</div>
+      </div>
+    </div>
+    <nav class="nav" aria-label="主导航">
+      <button class="nav-item active" data-screen="home"><svg class="icon"><use href="#i-home"/></svg><span>首页</span></button>
+      <button class="nav-item" data-screen="home"><svg class="icon"><use href="#i-grid"/></svg><span>浏览市场</span></button>
+      <button class="nav-item" data-screen="publish"><svg class="icon"><use href="#i-plus"/></svg><span>发布闲置</span></button>
+      <button class="nav-item" data-screen="profile"><svg class="icon"><use href="#i-msg"/></svg><span>消息</span></button>
+      <button class="nav-item" data-screen="profile"><svg class="icon"><use href="#i-user"/></svg><span>个人中心</span></button>
+      <button class="nav-item" data-screen="login" aria-label="登录或注册账号">
+        <svg class="icon"><use href="#i-user"/></svg><span>登录 / 注册</span>
+      </button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="avatar">柯</div>
+      <span style="font-size:var(--fs-sm);font-weight:600">柯同学</span>
+    </div>
+  </aside>
+
+  <!-- 主区 -->
+  <div class="main">
+    <header class="topbar">
+      <div class="search">
+        <svg class="icon"><use href="#i-search"/></svg>
+        <input type="search" placeholder="搜索教材、自行车、电子产品…" aria-label="搜索商品" />
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" aria-label="通知"><svg class="icon"><use href="#i-bell"/></svg><span class="dot"></span></button>
+        <button class="icon-btn" aria-label="收藏"><svg class="icon"><use href="#i-heart"/></svg></button>
+        <button class="btn btn-primary sm" id="openAuth">登录 / 注册</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- ===== 首页 / 商品浏览 ===== -->
+      <section class="screen active" id="screen-home">
+        <div class="hero">
+          <div>
+            <h1>让闲置，遇见下一个主人</h1>
+            <p>校内同学间的二手交易广场。教材、数码、单车、好物，安全又省心。</p>
+            <div style="display:flex;gap:var(--space-3)">
+              <button class="btn btn-primary lg" data-screen="publish">发布闲置</button>
+              <button class="btn btn-subtle lg" onclick="toast('已为你筛选今日上新')">看今日上新</button>
+            </div>
+          </div>
+          <div class="hero-art"><svg class="icon" style="width:72px;height:72px"><use href="#i-leaf"/></svg></div>
+        </div>
+
+        <div class="chip-group" style="margin-bottom:var(--space-6)" role="tablist" aria-label="分类">
+          <button class="chip active">全部</button>
+          <button class="chip">教材资料</button>
+          <button class="chip">数码电子</button>
+          <button class="chip">自行车</button>
+          <button class="chip">服饰</button>
+          <button class="chip">宿舍好物</button>
+          <button class="chip">票券</button>
+        </div>
+
+        <div class="section-head">
+          <h2>为你推荐</h2>
+          <a class="link-more" href="#">查看全部 <svg class="icon-sm"><use href="#i-arrow"/></svg></a>
+        </div>
+        <div class="grid" id="productGrid"></div>
+      </section>
+
+      <!-- ===== 商品详情 ===== -->
+      <section class="screen" id="screen-detail">
+        <div class="crumbs"><a href="#" onclick="show('home')">首页</a> <svg class="icon-sm"><use href="#i-arrow"/></svg> <span>教材资料</span> <svg class="icon-sm"><use href="#i-arrow"/></svg> <span>商品详情</span></div>
+        <div class="detail">
+          <div class="gallery">
+            <div class="main-img"><svg class="ic"><use href="#i-book"/></svg></div>
+            <div class="thumbs">
+              <div class="t on"><svg class="icon"><use href="#i-book"/></svg></div>
+              <div class="t"><svg class="icon"><use href="#i-book"/></svg></div>
+              <div class="t"><svg class="icon"><use href="#i-book"/></svg></div>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex;gap:var(--space-2);margin-bottom:var(--space-3)">
+              <span class="badge green"><svg class="ic"><use href="#i-check"/></svg>已验货</span>
+              <span class="badge coral">急出 -30%</span>
+            </div>
+            <h1>九成新《高等数学》第七版 上下册 + 习题全解</h1>
+            <div class="price-row">
+              <span class="price">¥ 28</span>
+              <span class="badge amber">原价 ¥89</span>
+              <span style="color:var(--text-subtle);font-size:var(--fs-sm)">12 人想要</span>
+            </div>
+            <p class="desc">考研结束转出，几乎全新无笔记。上下册齐全，附赠习题全解一本。校内可面交，支持先验书后付款。</p>
+            <div class="spec">
+              <div class="row"><span>成色</span><span>九成新</span></div>
+              <div class="row"><span>分类</span><span>教材资料</span></div>
+              <div class="row"><span>交易方式</span><span>校内面交</span></div>
+              <div class="row"><span>发布于</span><span>2 小时前</span></div>
+            </div>
+            <div class="seller-card">
+              <div class="avatar lg">林</div>
+              <div style="flex:1">
+                <div style="font-weight:600">林同学 · 计算机学院</div>
+                <div style="color:var(--text-subtle);font-size:var(--fs-xs);display:flex;align-items:center;gap:6px"><svg class="icon-sm"><use href="#i-star"/></svg> 4.9 · 28 笔成交 · <svg class="icon-sm"><use href="#i-pin"/></svg> 东区宿舍</div>
+              </div>
+              <button class="btn btn-ghost sm">私聊</button>
+            </div>
+            <div class="buy-row">
+              <button class="btn btn-primary" onclick="toast('已发起购买，等待卖家确认')"><svg class="icon-sm"><use href="#i-cart"/></svg> 立即购买</button>
+              <button class="btn btn-ghost" onclick="toast('已加入想要清单')"><svg class="icon-sm"><use href="#i-heart"/></svg> 想要</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 发布闲置 ===== -->
+      <section class="screen" id="screen-publish">
+        <div class="publish">
+          <div class="section-head" style="margin-top:0"><h2>发布闲置</h2></div>
+          <div class="field">
+            <label>商品标题 <span class="hint">一句话说清是什么、成色如何</span></label>
+            <input class="input" placeholder="例如：九成新 iPad Air 5 64G  wifi版" />
+          </div>
+          <div class="field">
+            <label>分类</label>
+            <div class="seg">
+              <button class="chip active">教材资料</button>
+              <button class="chip">数码电子</button>
+              <button class="chip">自行车</button>
+              <button class="chip">服饰</button>
+              <button class="chip">宿舍好物</button>
+            </div>
+          </div>
+          <div class="field" style="display:flex;gap:var(--space-4)">
+            <div style="flex:1">
+              <label>价格 <span class="hint">¥</span></label>
+              <input class="input" type="number" placeholder="28" />
+            </div>
+            <div style="flex:1">
+              <label>成色</label>
+              <select class="input"><option>全新</option><option>九成新</option><option>八成新</option><option>七成新及以下</option></select>
+            </div>
+          </div>
+          <div class="field">
+            <label>商品图片 <span class="hint">最多 9 张，首图更吸引人</span></label>
+            <div class="dropzone" id="drop">
+              <svg class="ic"><use href="#i-cam"/></svg>
+              <div style="font-weight:600">点击或拖拽图片到此处</div>
+              <div style="font-size:var(--fs-xs);margin-top:4px">支持 JPG / PNG，单张 ≤ 10MB</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>描述 <span class="hint">转手原因、瑕疵、交易方式</span></label>
+            <textarea class="input" placeholder="考研结束转出，几乎全新…"></textarea>
+          </div>
+          <div style="display:flex;gap:var(--space-3)">
+            <button class="btn btn-primary lg" onclick="toast('发布成功，已上架市场')">发布商品</button>
+            <button class="btn btn-subtle lg">存草稿</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 个人中心 + 订单 ===== -->
+      <section class="screen" id="screen-profile">
+        <div class="profile-head">
+          <div class="avatar lg">柯</div>
+          <div class="info">
+            <h1>柯同学</h1>
+            <p>软件学院 · 已认证校内用户 · 信用分 98</p>
+          </div>
+          <div class="stats">
+            <div class="stat"><b>12</b><span>在售</span></div>
+            <div class="stat"><b>46</b><span>成交</span></div>
+            <div class="stat"><b>4.9</b><span>评分</span></div>
+          </div>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab" data-tab="orders">我的订单</button>
+          <button class="tab active" data-tab="selling">我发布的</button>
+          <button class="tab" data-tab="wish">想要清单</button>
+          <button class="tab" data-tab="set">设置</button>
+        </div>
+        <div id="tab-orders" style="display:none"></div>
+        <div id="tab-selling">
+          <div class="grid" id="sellingGrid"></div>
+        </div>
+        <div id="tab-wish" style="display:none">
+          <div class="order"><div class="thumb"><svg class="ic"><use href="#i-phone"/></svg></div><div class="tt"><div class="t">iPad Air 5 64G</div><div class="m">数码电子 · 九成新</div></div><div class="amt">¥ 1680</div><span class="badge coral">急出</span></div>
+        </div>
+        <div id="tab-set" style="display:none">
+          <div class="order"><div class="tt"><div class="t">账号与安全</div></div><svg class="icon" style="color:var(--text-subtle)"><use href="#i-arrow"/></svg></div>
+          <div class="order"><div class="tt"><div class="t">通知偏好</div></div><svg class="icon" style="color:var(--text-subtle)"><use href="#i-arrow"/></svg></div>
+          <div class="order"><div class="tt"><div class="t">校园认证</div><div class="m">已认证 · 软件学院</div></div><span class="badge green"><svg class="ic"><use href="#i-check"/></svg>已认证</span></div>
+        </div>
+      </section>
+
+      <!-- ===== 设计规范 ===== -->
+      <section class="screen" id="screen-system">
+        <div class="section-head" style="margin-top:0"><h2>设计系统 · 规范速览</h2></div>
+        <h3 style="margin:var(--space-5) 0 var(--space-3);font-size:var(--fs-h2)">色彩令牌</h3>
+        <div class="sys-grid" id="swatches"></div>
+        <h3 style="margin:var(--space-8) 0 var(--space-3);font-size:var(--fs-h2)">字体阶梯</h3>
+        <div id="typeScale"></div>
+        <h3 style="margin:var(--space-8) 0 var(--space-3);font-size:var(--fs-h2)">组件</h3>
+        <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary">主按钮</button>
+          <button class="btn btn-ghost">次按钮</button>
+          <button class="btn btn-subtle">弱按钮</button>
+          <span class="badge green"><svg class="ic"><use href="#i-check"/></svg>已验货</span>
+          <span class="badge coral">急出</span>
+          <span class="badge amber">限时</span>
+          <span class="chip active">选中标签</span>
+        </div>
+      </section>
+
+      <!-- ===== 登录 / 注册屏（screen-login） ===== -->
+      <section class="screen" id="screen-login" aria-labelledby="loginTitle">
+        <div class="login-wrap">
+          <div class="login-card" role="region" aria-label="登录或注册表单">
+            <h1 id="loginTitle">欢迎回来</h1>
+            <p class="login-sub">登录到校园集市，开始你的闲置流转</p>
+
+            <div class="auth-tabs" role="tablist" aria-label="登录或注册">
+              <button class="auth-tab" role="tab" id="tabPaneLogin" data-auth="login" aria-selected="true" aria-controls="paneLogin">登录</button>
+              <button class="auth-tab" role="tab" id="tabPaneReg" data-auth="reg" aria-selected="false" aria-controls="paneReg">注册</button>
+            </div>
+
+            <!-- 登录表单 -->
+            <form class="auth-form" id="paneLogin" data-pane="login" role="tabpanel" aria-labelledby="tabPaneLogin" autocomplete="on" novalidate onsubmit="event.preventDefault();toast('登录成功，欢迎回来');">
+              <div class="input-wrap">
+                <svg class="icon input-pre" aria-hidden="true"><use href="#i-user"/></svg>
+                <input id="liId" class="input has-icon" type="text" placeholder="学号 / 校园邮箱" autocomplete="username" required aria-required="true" aria-label="学号或邮箱" />
+              </div>
+              <div class="input-wrap">
+                <svg class="icon input-pre" aria-hidden="true"><use href="#i-shield"/></svg>
+                <input id="liPwd" class="input has-icon has-suf" type="password" placeholder="密码" autocomplete="current-password" required aria-required="true" aria-label="密码" />
+                <button type="button" class="input-suf" aria-label="显示密码" data-toggle="pwd" data-target="liPwd">
+                  <svg class="icon" aria-hidden="true"><use href="#i-eye"/></svg>
+                </button>
+              </div>
+              <div class="login-row">
+                <label class="remember"><input type="checkbox" aria-label="记住我" /> 记住我</label>
+                <a href="#" class="forgot">忘记密码？</a>
+              </div>
+              <button type="submit" class="btn btn-primary lg" style="width:100%">登录</button>
+              <button type="button" class="btn btn-ghost" style="width:100%;margin-top:var(--space-3)" onclick="toast('已跳转校园统一认证（演示）')">
+                <svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>
+                校园统一认证登录
+              </button>
+              <p class="auth-foot">还没有账号？<a href="#" data-switch="reg">立即注册</a></p>
+            </form>
+
+            <!-- 注册表单 -->
+            <form class="auth-form" id="paneReg" data-pane="reg" role="tabpanel" aria-labelledby="tabPaneReg" style="display:none" autocomplete="on" novalidate onsubmit="event.preventDefault();toast('注册成功，请查收验证邮件');">
+              <div class="field-compact">
+                <label for="regSid">学号<span class="req" aria-hidden="true">*</span></label>
+                <input id="regSid" class="input" type="text" placeholder="例如：2023100234" autocomplete="username" aria-required="true" required />
+              </div>
+              <div class="field-compact">
+                <label for="regName">昵称</label>
+                <input id="regName" class="input" type="text" placeholder="你在校园集市想被怎么称呼" />
+              </div>
+              <div class="field-compact">
+                <label for="regContact">邮箱或手机号</label>
+                <input id="regContact" class="input" type="text" placeholder="name@campus.edu.cn 或 13800000000" autocomplete="email" />
+              </div>
+              <div class="field-compact">
+                <label for="regPwd">设置密码<span class="req" aria-hidden="true">*</span></label>
+                <input id="regPwd" class="input" type="password" placeholder="至少 8 位，含字母与数字" autocomplete="new-password" aria-required="true" required aria-describedby="regPwdHint" />
+                <div class="pwd-strength" id="regPwdHint" data-level="0" aria-live="polite">
+                  <i></i><i></i><i></i><em>弱</em>
+                </div>
+              </div>
+              <div class="field-compact">
+                <label for="regVerify">校园认证</label>
+                <input id="regVerify" class="input" type="text" placeholder="请输入校园认证码" aria-describedby="regVerifyHint" />
+                <p id="regVerifyHint" class="hint">完成认证后即可发布商品、收发消息</p>
+              </div>
+              <label class="agree">
+                <input type="checkbox" required aria-required="true" aria-label="同意用户协议与隐私政策" />
+                <span>我已阅读并同意<a href="#">《用户协议》</a>与<a href="#">《隐私政策》</a></span>
+              </label>
+              <button type="submit" class="btn btn-primary lg" style="width:100%">注册</button>
+              <p class="auth-foot">已有账号？<a href="#" data-switch="login">返回登录</a></p>
+            </form>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 登录 / 注册（全屏路由） ===== -->
+<div class="auth" id="auth">
+  <div class="aside">
+    <div>
+      <div class="brand" style="padding:0"><div class="brand-mark"><svg class="icon"><use href="#i-leaf"/></svg></div><div><div class="brand-name" style="color:#fff">校园集市</div><div class="brand-sub">CAMPUS MICROMART</div></div></div>
+      <h2 style="margin-top:var(--space-10)">同学，欢迎回到集市</h2>
+      <p>校内实名、信用可见，买卖更安心。一键用校园账号登录即可开张。</p>
+    </div>
+    <div class="big"><svg class="ic"><use href="#i-leaf"/></svg></div>
+  </div>
+  <div class="panel">
+    <div class="form">
+      <h1 id="authTitle">登录</h1>
+      <p class="sub" id="authSub">使用校园账号登录，开启你的二手集市。</p>
+      <div class="auth-toggle">
+        <button class="on" id="tabLogin" onclick="setAuth('login')">登录</button>
+        <button id="tabReg" onclick="setAuth('reg')">注册</button>
+      </div>
+      <div class="field"><label>校园邮箱</label><input class="input" placeholder="name@campus.edu.cn" /></div>
+      <div class="field"><label>密码</label><input class="input" type="password" placeholder="••••••••" /></div>
+      <div class="field" id="regField" style="display:none"><label>确认密码</label><input class="input" type="password" placeholder="••••••••" /></div>
+      <button class="btn btn-primary lg" style="width:100%" onclick="toast('登录成功，欢迎回来');closeAuth()">登录</button>
+      <p style="text-align:center;color:var(--text-subtle);font-size:var(--fs-xs);margin-top:var(--space-4)">登录即表示同意《校园集市用户协议》</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><svg class="icon"><use href="#i-check"/></svg><span id="toastMsg"></span></div>
+
+<script>
+  // ---- 数据 ----
+  const products = [
+    {t:'九成新《高等数学》第七版',p:28,cat:'教材',ic:'i-book',cond:'九成新',s:'林同学',tag:'coral',tagT:'急出'},
+    {t:'捷安特 ATX 660 山地车',p:420,cat:'单车',ic:'i-bike',cond:'八成新',s:'王同学',tag:'',tagT:''},
+    {t:'iPad Air 5 64G wifi版',p:1680,cat:'数码',ic:'i-phone',cond:'九成新',s:'陈同学',tag:'amber',tagT:'降价'},
+    {t:'冬季羽绒服 男 M码',p:99,cat:'服饰',ic:'i-shirt',cond:'八成新',s:'赵同学',tag:'',tagT:''},
+    {t:'考研英语真题 2005-2024',p:35,cat:'教材',ic:'i-book',cond:'九成新',s:'孙同学',tag:'',tagT:''},
+    {t:'机械键盘 茶轴 87键',p:120,cat:'数码',ic:'i-phone',cond:'九成新',s:'李同学',tag:'green',tagT:'已验货'},
+    {t:'宿舍小冰箱 50L',p:150,cat:'宿舍',ic:'i-cart',cond:'八成新',s:'周同学',tag:'',tagT:''},
+    {t:'二手山地车 通勤首选',p:260,cat:'单车',ic:'i-bike',cond:'七成新',s:'吴同学',tag:'coral',tagT:'急出'},
+  ];
+  const selling = [
+    {t:'《操作系统概念》中文版',p:25,ic:'i-book'},
+    {t:'罗技 MX 鼠标',p:110,ic:'i-phone'},
+    {t:'折叠自行车',p:300,ic:'i-bike'},
+    {t:'夏季卫衣 女 L',p:55,ic:'i-shirt'},
+  ];
+  const orders = [
+    {t:'《线性代数》第六版',m:'待发货 · 买方已付款',p:22,ic:'i-book',st:'amber',stT:'进行中'},
+    {t:'台灯 护眼 LED',m:'交易完成 · 已面交',p:45,ic:'i-cart',st:'green',stT:'已完成'},
+    {t:'二手显示器 24寸',m:'已取消 · 买家超时',p:230,ic:'i-phone',st:'gray',stT:'已取消'},
+  ];
+
+  // ---- 渲染商品卡 ----
+  function cardHTML(o){
+    return `<article class="card product" tabindex="0" role="button" onclick="show('detail')" onkeydown="if(event.key==='Enter')show('detail')">
+      <div class="thumb"><svg class="ic"><use href="#${o.ic}"/></svg>${o.tag?`<span class="badge ${o.tag}">${o.tagT}</span>`:''}</div>
+      <div class="body">
+        <div class="title">${o.t}</div>
+        <div class="meta"><span class="price">¥${o.p}<small> ${o.cat}</small></span><span class="badge gray">${o.cond}</span></div>
+        <div class="seller"><span class="avatar">${o.s[0]}</span>${o.s} · 校内面交</div>
+      </div></article>`;
+  }
+  document.getElementById('productGrid').innerHTML = products.map(cardHTML).join('');
+  document.getElementById('sellingGrid').innerHTML = products.slice(0,4).map(cardHTML).join('');
+  document.getElementById('tab-orders').innerHTML = orders.map(o=>`
+    <div class="order"><div class="thumb"><svg class="ic"><use href="#${o.ic}"/></svg></div>
+    <div class="tt"><div class="t">${o.t}</div><div class="m">${o.m}</div></div>
+    <div class="amt">¥${o.p}</div><span class="badge ${o.st}">${o.stT}</span></div>`).join('');
+
+  // ---- 设计规范渲染 ----
+  const sw = [
+    ['--green-500','主色 Primary','#2fa978'],['--green-600','主色悬停','#24885f'],
+    ['--green-50','主色浅底','#eafaf2'],['--coral-500','优惠 Coral','#ec6a53'],
+    ['--amber-500','急出 Amber','#e0a23c'],['--bg','背景 BG','#fbfbf8'],
+    ['--surface','表面 Surface','#ffffff'],['--text','正文 Text','#2a2f2c'],
+    ['--text-muted','次级文字','#6f756f'],['--border','描边 Border','#e6e6df'],
+  ];
+  document.getElementById('swatches').innerHTML = sw.map(([v,n,h])=>`
+    <div class="swatch"><div class="c" style="background:var(${v})"></div>
+    <div class="meta"><b>${n}</b><code>${h}</code></div></div>`).join('');
+  const typeRows = [
+    ['Display','让闲置，遇见下一个主人','var(--fs-display)'],
+    ['H1 区块标题','为你推荐','var(--fs-h1)'],
+    ['H2 卡片标题','商品标题示例','20px'],
+    ['Base 正文','校园集市是校内二手交易平台。','16px'],
+    ['Small 次级','发布于 2 小时前','14px'],
+    ['XS 标签','急出 · 已验货','12px'],
+  ];
+  document.getElementById('typeScale').innerHTML = typeRows.map(([l,s,f])=>`
+    <div class="type-row"><span class="lab">${l}</span><span class="samp" style="font-size:${f}">${s}</span></div>`).join('');
+
+  // ---- 交互 ----
+  const navMap={home:'home',detail:'home',publish:'publish',profile:'profile',system:'profile',login:'login'};
+  function show(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screen-'+id).classList.add('active');
+    const want=navMap[id];
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.screen===want));
+    document.body.classList.toggle('is-auth', id==='login');
+    closeAuth();
+    window.scrollTo({top:0});
+  }
+  document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>show(b.dataset.screen)));
+  document.querySelectorAll('[data-screen]').forEach(b=>{if(b.tagName!=='BUTTON'||!b.classList.contains('nav-item'))b.addEventListener('click',()=>show(b.dataset.screen));});
+  // 分类 chips
+  document.querySelectorAll('.chip-group .chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.chip-group .chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');}));
+  // tabs
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    ['orders','selling','wish','set'].forEach(k=>document.getElementById('tab-'+k).style.display = (t.dataset.tab===k?'block':'none'));
+  }));
+  // 发布分类 seg
+  document.querySelectorAll('.publish .seg .chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.publish .seg .chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');}));
+  // 上传区
+  const drop=document.getElementById('drop');
+  ['dragover','dragenter'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('drag');}));
+  ['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('drag');}));
+  drop.addEventListener('click',()=>toast('请选择图片（演示）'));
+  drop.addEventListener('drop',()=>toast('已添加 1 张图片（演示）'));
+  // 详情缩略图
+  document.querySelectorAll('.gallery .thumbs .t').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.gallery .thumbs .t').forEach(x=>x.classList.remove('on'));t.classList.add('on');}));
+
+  // ---- 登录注册 ----
+  const auth=document.getElementById('auth');
+  document.getElementById('openAuth').addEventListener('click',()=>show('login'));
+  function closeAuth(){auth.classList.remove('active');}
+  function setAuth(m){const login=m==='login';
+    document.getElementById('tabLogin').classList.toggle('on',login);
+    document.getElementById('tabReg').classList.toggle('on',!login);
+    document.getElementById('authTitle').textContent=login?'登录':'注册';
+    document.getElementById('authSub').textContent=login?'使用校园账号登录，开启你的二手集市。':'填写信息完成校园实名注册。';
+    document.getElementById('regField').style.display=login?'none':'block';
+    document.querySelector('#auth .btn-primary').textContent=login?'登录':'注册并开张';
+  }
+
+  // ---- 登录/注册屏 Tab & 表单 ----
+  document.querySelectorAll('.auth-tab').forEach(t=>t.addEventListener('click',()=>{
+    const which=t.dataset.auth;
+    document.querySelectorAll('.auth-tab').forEach(x=>{
+      const sel=x.dataset.auth===which;
+      x.setAttribute('aria-selected',sel);
+      x.classList.toggle('active',sel);
+    });
+    document.querySelectorAll('.auth-form').forEach(f=>{f.style.display = f.dataset.pane===which?'block':'none';});
+  }));
+  document.querySelectorAll('[data-switch]').forEach(l=>l.addEventListener('click',e=>{
+    e.preventDefault();
+    const tab=document.querySelector('.auth-tab[data-auth="'+l.dataset.switch+'"]');
+    if(tab)tab.click();
+  }));
+  // 密码可见切换
+  document.querySelectorAll('[data-toggle="pwd"]').forEach(b=>b.addEventListener('click',()=>{
+    const tgt=document.getElementById(b.dataset.target);
+    if(!tgt)return;
+    const showPwd=tgt.type==='password';
+    tgt.type=showPwd?'text':'password';
+    const use=b.querySelector('use');
+    if(use)use.setAttribute('href',showPwd?'#i-eye-off':'#i-eye');
+    b.setAttribute('aria-label',showPwd?'隐藏密码':'显示密码');
+  }));
+  // 密码强度
+  const rpwd=document.getElementById('regPwd');
+  if(rpwd){
+    const bar=document.getElementById('regPwdHint');
+    const lab=bar.querySelector('em');
+    rpwd.addEventListener('input',()=>{
+      const v=rpwd.value;let lv=0;
+      if(v.length>=8)lv++;
+      if(/[A-Z]/.test(v)&&/[a-z]/.test(v))lv++;
+      if(/[0-9]/.test(v)&&/[^A-Za-z0-9]/.test(v))lv++;
+      if(v.length===0)lv=0;
+      bar.dataset.level=lv;
+      lab.textContent=['弱','中','强'][lv-1]||'弱';
+    });
+  }
+  // 登录态 topbar 拦截
+  document.querySelector('.topbar').addEventListener('click',e=>{
+    if(!document.body.classList.contains('is-auth'))return;
+    const t=e.target.closest('.icon-btn, .search, .search input');
+    if(!t)return;
+    e.preventDefault();
+    if(t.closest('.search')){e.target.closest('.search').querySelector('input')?.blur();}
+    toast('请先登录');
+  });
+  document.querySelector('.search input')?.addEventListener('focus',e=>{
+    if(document.body.classList.contains('is-auth')){
+      e.preventDefault();
+      e.target.blur();
+      toast('请先登录后使用搜索');
+    }
+  });
+
+  // ---- Toast ----
+  let tt;
+  function toast(msg){const el=document.getElementById('toast');document.getElementById('toastMsg').textContent=msg;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),2600);}
+</script>
+
+<!-- 2026-09-01: 新增 screen-login（登录/注册 Tab），左栏第 6 项导航，topbar 登录态处理 -->
+</body>
+</html>

@@ -1,6 +1,7 @@
 package com.campus.product.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.campus.common.feign.ProductInfo;
 import com.campus.product.dto.AuditProductDTO;
 import com.campus.product.dto.CreateProductDTO;
 import com.campus.product.entity.Product;
@@ -13,4 +14,5 @@ public interface ProductService extends IService<Product> {
     void offShelf(Long productId);
     void cancelProduct(Long productId);
     void markSold(Long productId);
+    ProductInfo getProductInfo(Long productId);
 }

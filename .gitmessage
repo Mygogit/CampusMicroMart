@@ -1,0 +1,21 @@
+# <type>(<scope>): <subject>   首行 ≤50 字, 祈使句, 无句号
+#
+# type 取值:
+#   feat     新功能
+#   fix      缺陷修复
+#   docs     文档
+#   style    格式(不影响逻辑)
+#   refactor 重构
+#   perf     性能优化
+#   test     测试
+#   build    构建/依赖
+#   ci       CI 配置
+#   chore    杂项
+#   revert   回滚
+# scope 可选, 如 frontend / backend / auth / order
+#
+# 正文(可选): 解释 why 而非 what, 每行 ≤72 字
+#
+# Footer(可选):
+#   BREAKING CHANGE: <描述>
+#   Refs: #123

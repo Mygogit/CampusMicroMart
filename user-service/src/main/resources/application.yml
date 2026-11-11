@@ -48,7 +48,7 @@ spring:
         port: 8723
 
 jwt:
-  secret: Y2FtcHVzLW1pY3JvLW1hcnQtc2VjcmV0LWtleS0yMDI0LXNlY3VyZS1rZXktYmFzZTY0
+  secret: ${JWT_SECRET:Y2FtcHVzLW1pY3JvLW1hcnQtc2VjcmV0LWtleS0yMDI0LXNlY3VyZS1rZXktYmFzZTY0}
   expiration: 604800
 
 seata:
@@ -68,7 +68,7 @@ management:
         include: health,info,prometheus,metrics
   endpoint:
     health:
-      show-details: always
+      show-details: never
   metrics:
     export:
       prometheus:

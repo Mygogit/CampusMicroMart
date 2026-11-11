@@ -7,6 +7,7 @@ import com.campus.order.dto.CreateOrderDTO;
 import com.campus.order.entity.Order;
 
 import java.io.OutputStream;
+import java.math.BigDecimal;
 
 public interface OrderService extends IService<Order> {
     Order createOrder(CreateOrderDTO createOrderDTO);
@@ -16,5 +17,6 @@ public interface OrderService extends IService<Order> {
     boolean confirmDelivery(Long orderId);
     IPage<Order> getMyOrders(Integer page, Integer size);
     int batchUpdateOrderStatus(BatchUpdateOrderStatusDTO dto);
+    BigDecimal getOrderAmount(Long orderId);
     void exportExcel(OutputStream outputStream);
 }

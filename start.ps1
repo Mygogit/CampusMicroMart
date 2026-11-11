@@ -42,19 +42,25 @@ $DataDir = Join-Path $DistDir 'data'
 $JdkHome = Join-Path $DistDir 'jdk'
 $MariadbHome = Join-Path $DistDir 'mariadb'
 $RedisHome = Join-Path $DistDir 'redis'
+# 网关路由覆盖目录 (product 指向 8082)
+$GwCfg = Join-Path $ProjectRoot 'scripts\gw-config'
+# MariaDB 数据目录: 项目路径含中文, MariaDB 11.4 无法初始化, 实际数据在 C 盘
+$DbDataDir = 'C:\CampusMart\data\mysql'
 
 # 服务定义
+# 端口说明: 本机 8080/8081 被 WSL 智能题库(SQB)容器占用
+#           → gateway 改 8090 (原 8080), product 改 8082 (原 8081)
 $Services = @(
-    @{ Name='user-service';    Port=8084; Jar='app\user-service.jar';    DependsOn=@() },
-    @{ Name='product-service'; Port=8081; Jar='app\product-service.jar'; DependsOn=@() },
-    @{ Name='order-service';   Port=8083; Jar='app\order-service.jar';   DependsOn=@('user-service','product-service') },
-    @{ Name='payment-service'; Port=8085; Jar='app\payment-service.jar'; DependsOn=@() },
-    @{ Name='campus-gateway';  Port=8080; Jar='app\campus-gateway.jar';  DependsOn=@('user-service','product-service','order-service','payment-service'); IsGateway=$true }
+    @{ Name='user-service';    Port=8084; Jar='app\user-service.jar';    DependsOn=@(); ExtraArgs=@() },
+    @{ Name='product-service'; Port=8082; Jar='app\product-service.jar'; DependsOn=@(); ExtraArgs=@() },
+    @{ Name='order-service';   Port=8083; Jar='app\order-service.jar';   DependsOn=@('user-service','product-service'); ExtraArgs=@('--spring.cloud.openfeign.client.config.product-service.url=http://localhost:8082') },
+    @{ Name='payment-service'; Port=8085; Jar='app\payment-service.jar'; DependsOn=@(); ExtraArgs=@() },
+    @{ Name='campus-gateway';  Port=8090; Jar='app\campus-gateway.jar';  DependsOn=@('user-service','product-service','order-service','payment-service'); IsGateway=$true; ExtraArgs=@("--spring.config.additional-location=file:$GwCfg/") }
 )
 
 # 中间件
 $Middlewares = @(
-    @{ Name='MariaDB'; Port=3306; Exe="$MariadbHome\bin\mysqld.exe";    Args="--defaults-file=$DataDir\mysql\my.ini"; ReadyCheck={ Test-Port 3306 }; TimeoutSec=45 },
+    @{ Name='MariaDB'; Port=3306; Exe="$MariadbHome\bin\mysqld.exe";    Args="--defaults-file=$DbDataDir\my.ini"; ReadyCheck={ Test-Port 3306 }; TimeoutSec=45 },
     @{ Name='Redis';   Port=6379; Exe="$RedisHome\redis-server.exe";    Args="--port 6379 --maxmemory 128mb"; ReadyCheck={ Test-Port 6379 }; TimeoutSec=10 }
 )
 
@@ -391,15 +397,37 @@ function Start-MicroService {
         '-XX:MaxMetaspaceSize=128m'              # 限制元空间
     )
 
+    $extraArgs = @()
+    if ($Svc.ExtraArgs) { $extraArgs = @($Svc.ExtraArgs) }
     $args = @(
         '-jar', $jarPath,
         "--spring.profiles.active=$Mode",
+        "--server.port=$($Svc.Port)",
         "-Dfile.encoding=UTF-8"
-    ) + $jvmMemArgs + $jvmCommonArgs
+    ) + $jvmMemArgs + $jvmCommonArgs + $extraArgs
 
     $errLogPath = Join-Path $LogDir "$($Svc.Name)-err.log"
-    $proc = Start-Process -FilePath $javaExe -ArgumentList $args -NoNewWindow -PassThru `
-        -RedirectStandardOutput $logPath -RedirectStandardError $errLogPath
+    # 修复: PowerShell 5.1 Start-Process 在 Path/PATH 环境变量重复时崩溃
+    # 改用 .NET Process.Start 直连 Start-ProcessDetached-like 行为
+    $procInfo = [System.Diagnostics.ProcessStartInfo]::new($javaExe, ($args -join ' '))
+    $procInfo.UseShellExecute = $false
+    $procInfo.RedirectStandardOutput = $true
+    $procInfo.RedirectStandardError = $true
+    $procInfo.CreateNoWindow = $true
+    $procInfo.WorkingDirectory = $DistDir
+    $proc = [System.Diagnostics.Process]::new()
+    $proc.StartInfo = $procInfo
+    try { $proc.Start() | Out-Null } catch {
+        Write-ColorLog "$($Svc.Name) 启动异常: $_" -Level 'ERROR'
+        throw
+    }
+    # 异步将 stdout/stderr 写到日志
+    $outWriter = [System.IO.StreamWriter]::new($logPath, $true)
+    $errWriter = [System.IO.StreamWriter]::new($errLogPath, $true)
+    Register-ObjectEvent -InputObject $proc -EventName 'OutputDataReceived' -Action { if ($Event.SourceEventArgs.Data) { $Event.MessageData.WriteLine($Event.SourceEventArgs.Data) } } -MessageData $outWriter | Out-Null
+    Register-ObjectEvent -InputObject $proc -EventName 'ErrorDataReceived'  -Action { if ($Event.SourceEventArgs.Data) { $Event.MessageData.WriteLine($Event.SourceEventArgs.Data) } } -MessageData $errWriter | Out-Null
+    $proc.BeginOutputReadLine()
+    $proc.BeginErrorReadLine()
 
     $script:ServicePids[$Svc.Name] = $proc.Id
     # 记录启动参数，方便排查
@@ -441,12 +469,30 @@ function Start-Frontend {
         Write-ColorLog "使用 classes 目录作为 classpath" -Level 'INFO'
     }
     $errLogPath = Join-Path $LogDir 'frontend-err.log'
-    $proc = Start-Process -FilePath $javaExe -NoNewWindow -PassThru `
-        -ArgumentList @('-cp', $classesDir, 'com.campus.gateway.FrontendServer', '80', $frontendDir, 'http://localhost:8080') `
-        -RedirectStandardOutput $logPath -RedirectStandardError $errLogPath
+    # 修复: 同上，绕开 Start-Process 的 Path/PATH bug
+    $frontendArgs = @('-cp', $classesDir, 'com.campus.gateway.FrontendServer', '80', $frontendDir, 'http://localhost:8090')
+    $procInfo = [System.Diagnostics.ProcessStartInfo]::new($javaExe, ($frontendArgs -join ' '))
+    $procInfo.UseShellExecute = $false
+    $procInfo.RedirectStandardOutput = $true
+    $procInfo.RedirectStandardError = $true
+    $procInfo.CreateNoWindow = $true
+    $procInfo.WorkingDirectory = $DistDir
+    $proc = [System.Diagnostics.Process]::new()
+    $proc.StartInfo = $procInfo
+    try { $proc.Start() | Out-Null } catch {
+        Write-ColorLog "Frontend 启动异常 (端口 80 可能被占用): $_" -Level 'ERROR'
+        $script:ServicePids['Frontend'] = $null
+        return
+    }
+    $outWriter = [System.IO.StreamWriter]::new($logPath, $true)
+    $errWriter = [System.IO.StreamWriter]::new($errLogPath, $true)
+    Register-ObjectEvent -InputObject $proc -EventName 'OutputDataReceived' -Action { if ($Event.SourceEventArgs.Data) { $Event.MessageData.WriteLine($Event.SourceEventArgs.Data) } } -MessageData $outWriter | Out-Null
+    Register-ObjectEvent -InputObject $proc -EventName 'ErrorDataReceived'  -Action { if ($Event.SourceEventArgs.Data) { $Event.MessageData.WriteLine($Event.SourceEventArgs.Data) } } -MessageData $errWriter | Out-Null
+    $proc.BeginOutputReadLine()
+    $proc.BeginErrorReadLine()
 
     $script:ServicePids['Frontend'] = $proc.Id
-    Write-ColorLog "Frontend PID: $($proc.Id) | http://localhost | API 代理 → :8080" -Level 'SUCCESS'
+    Write-ColorLog "Frontend PID: $($proc.Id) | http://localhost | API 代理 → :8090" -Level 'SUCCESS'
 }
 
 # ========================================
@@ -556,8 +602,8 @@ function Main {
         # 9. 状态汇总
         Start-Sleep -Seconds 3
         Write-ColorLog '启动状态汇总' -Level 'TITLE'
-        $allPorts = @(3306, 6379, 8080, 8081, 8083, 8084, 8085, 80)
-        $portNames = @{3306='MariaDB'; 6379='Redis'; 8080='Gateway'; 8081='Product'; 8083='Order'; 8084='User'; 8085='Payment'; 80='Frontend'}
+        $allPorts = @(3306, 6379, 8090, 8082, 8083, 8084, 8085, 80)
+        $portNames = @{3306='MariaDB'; 6379='Redis'; 8090='Gateway'; 8082='Product'; 8083='Order'; 8084='User'; 8085='Payment'; 80='Frontend'}
         foreach ($port in $allPorts) {
             $status = if (Test-Port $port) { '✓ 运行中' } else { '  - 未启动' }
             $color = if (Test-Port $port) { 'Green' } else { 'DarkGray' }
@@ -569,8 +615,8 @@ function Main {
         if (Test-Port 80) {
             Write-Host '   管理后台: http://localhost' -ForegroundColor Green
         }
-        if (Test-Port 8080) {
-            Write-Host '   API 网关: http://localhost:8080' -ForegroundColor Green
+        if (Test-Port 8090) {
+            Write-Host '   API 网关: http://localhost:8090' -ForegroundColor Green
         }
         Write-Host '   管理员:   admin / admin123' -ForegroundColor Yellow
         Write-Host "   日志目录: $LogDir" -ForegroundColor Gray

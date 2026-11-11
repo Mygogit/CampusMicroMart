@@ -149,7 +149,7 @@ Write-Host '========================================' -ForegroundColor Green
 Write-Host '  所有服务已停止' -ForegroundColor Green
 
 # 验证端口
-$ports = @(3306, 6379, 8080, 8081, 8083, 8084, 8085, 80)
+$ports = @(3306, 6379, 8090, 8082, 8083, 8084, 8085, 80)
 $stillOpen = @()
 foreach ($p in $ports) {
     try {

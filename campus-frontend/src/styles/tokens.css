@@ -1,0 +1,84 @@
+/* ==========================================================================
+   CampusMicroMart · 设计令牌 (Design Tokens)
+   来源：ui-design/design-system.md  ·  与 ui-design/prototype.html 同源
+   主题：清新校园极简 Fresh Campus Minimal
+
+   说明：设计文档以 oklch() 定义色彩，此处固化为 hex 以兼容全部主流浏览器
+   （oklch 需 Chrome 111+ / Safari 15.4+，hex 无此限制且色值等价）。
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* ---------- 主色 · 新生绿 ---------- */
+  --green-50: #eafaf2;   /* oklch(0.97 0.02 155) 选中/悬停底 */
+  --green-100: #cdf0e0;  /* oklch(0.93 0.05 155) 浅填充、标签底 */
+  --green-300: #7fd9b4;  /* oklch(0.82 0.11 155) 图标、装饰 */
+  --green-500: #2fa978;  /* oklch(0.68 0.14 155) ★ 主色 */
+  --green-600: #24885f;  /* oklch(0.60 0.14 155) 悬停/按压 */
+  --green-700: #1c6a4b;  /* oklch(0.52 0.13 155) 主色文字 */
+
+  /* ---------- 中性 · 暖白 ---------- */
+  --bg: #fbfbf8;         /* oklch(0.985 0.004 150) 页面背景 */
+  --surface: #ffffff;    /* oklch(1 0 0) 卡片表面 */
+  --surface-2: #f6f6f2;  /* oklch(0.975 0.004 150) 次级表面 */
+  --border: #e6e6df;     /* oklch(0.92 0.006 150) 描边 */
+  --text: #2a2f2c;       /* oklch(0.24 0.02 155) 正文 */
+  --text-muted: #6f756f; /* oklch(0.52 0.02 155) 次级文字 */
+  --text-subtle: #969b94;/* oklch(0.66 0.02 155) 占位/辅助 */
+
+  /* ---------- 强调色 ---------- */
+  --coral-500: #ec6a53;  /* 优惠/降价 */
+  --coral-50: #fdeae5;
+  --amber-500: #e0a23c;  /* 急出/限时 */
+
+  /* ---------- 语义色 ---------- */
+  --success: #3faa78;
+  --warning: #e0a23c;
+  --danger: #d2503f;
+  --info: #2fa978;
+
+  /* ---------- 字体 ---------- */
+  --font-display: 'Sora', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-body: 'Manrope', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  --fs-display: clamp(28px, 3vw, 40px);
+  --fs-h1: clamp(22px, 2vw, 28px);
+  --fs-h2: 20px;
+  --fs-base: 16px;
+  --fs-sm: 14px;
+  --fs-xs: 12px;
+
+  /* ---------- 间距（4px 基准） ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---------- 圆角 ---------- */
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  /* ---------- 阴影（低透明度、暖色偏绿） ---------- */
+  --shadow-sm: 0 1px 2px rgba(41, 53, 47, 0.04), 0 1px 3px rgba(41, 53, 47, 0.06);
+  --shadow-md: 0 4px 12px rgba(41, 53, 47, 0.07);
+  --shadow-lg: 0 12px 32px rgba(41, 53, 47, 0.10);
+
+  /* ---------- 动效 ---------- */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 160ms;
+  --dur: 280ms;
+
+  /* ---------- 布局骨架 ---------- */
+  --sidebar-w: 248px;
+  --topbar-h: 66px;
+  --content-max: 1200px;
+}

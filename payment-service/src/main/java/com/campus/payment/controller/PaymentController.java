@@ -3,6 +3,7 @@ package com.campus.payment.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.common.result.Result;
+import com.campus.common.security.UserContext;
 import com.campus.payment.dto.CallbackRequest;
 import com.campus.payment.dto.CallbackResponse;
 import com.campus.payment.dto.CreatePaymentDTO;
@@ -27,17 +28,27 @@ public class PaymentController {
     @Autowired
     private PaymentCallbackServiceImpl paymentCallbackService;
 
-    @Operation(summary = "获取支付记录列表")
+    @Operation(summary = "获取支付记录列表（管理员）")
     @GetMapping("/list")
     public Result<IPage<Payment>> list(@RequestParam(defaultValue = "1") Integer page,
                                        @RequestParam(defaultValue = "10") Integer size) {
+        if (!UserContext.isAdmin()) {
+            return Result.error(403, "仅管理员可查看全部支付记录");
+        }
         return Result.success(paymentService.page(new Page<>(page, size)));
     }
 
     @Operation(summary = "获取支付详情")
     @GetMapping("/{id}")
     public Result<Payment> getById(@PathVariable Long id) {
-        return Result.success(paymentService.getById(id));
+        Payment payment = paymentService.getById(id);
+        if (payment == null) {
+            return Result.error("支付记录不存在");
+        }
+        if (!canAccess(payment)) {
+            return Result.error(403, "无权查看该支付记录");
+        }
+        return Result.success(payment);
     }
 
     @Operation(summary = "创建支付")
@@ -49,6 +60,13 @@ public class PaymentController {
     @Operation(summary = "模拟支付")
     @PostMapping("/simulate")
     public Result<PaymentVO> simulatePayment(@RequestParam Long paymentId) {
+        Payment payment = paymentService.getById(paymentId);
+        if (payment == null) {
+            return Result.error("支付记录不存在");
+        }
+        if (!canAccess(payment)) {
+            return Result.error(403, "无权操作该支付记录");
+        }
         return Result.success(paymentService.simulatePayment(paymentId));
     }
 
@@ -67,7 +85,18 @@ public class PaymentController {
     @GetMapping("/query-by-order")
     public Result<PaymentVO> queryByOrderId(@RequestParam Long orderId) {
         PaymentVO vo = paymentService.queryByOrderId(orderId);
+        if (vo.getUserId() != null && !canAccessUserId(vo.getUserId())) {
+            return Result.error(403, "无权查看该支付记录");
+        }
         return Result.success(vo);
     }
-}
 
+    private boolean canAccess(Payment payment) {
+        return canAccessUserId(payment.getUserId());
+    }
+
+    private boolean canAccessUserId(Long ownerUserId) {
+        Long userId = UserContext.getCurrentUserId();
+        return userId != null && (userId.equals(ownerUserId) || UserContext.isAdmin());
+    }
+}

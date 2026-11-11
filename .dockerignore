@@ -1,0 +1,14 @@
+.git
+**/target
+**/node_modules
+dist-standalone
+dist-standalone.zip
+mysql
+nacos
+grafana
+env-setup
+logs
+*.log
+dump.rdb
+docs
+dist-standalone

@@ -15,7 +15,10 @@ public interface UserService extends IService<User> {
     UserVO getUserInfo(Long userId);
     UserVO getCurrentUser();
     UserVO updateProfile(Long userId, UpdateProfileDTO dto);
+    UserVO toVO(User user);
+    boolean recharge(Long userId, BigDecimal amount);
     boolean freezeDeposit(Long userId, BigDecimal amount);
     boolean unfreezeDeposit(Long userId, BigDecimal amount);
     boolean deductDeposit(Long userId, BigDecimal amount);
+    boolean creditDeposit(Long userId, BigDecimal amount);
 }

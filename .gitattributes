@@ -1,0 +1,22 @@
+# 统一行尾,避免 Windows/Linux/macOS 协作者之间出现无意义 diff
+* text=auto eol=lf
+
+# 脚本强制 LF
+*.sh text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# 二进制资源不 diff
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+
+# 锁文件不进入 diff(减少噪声)
+frontend/package-lock.json -diff

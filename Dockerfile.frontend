@@ -1,0 +1,11 @@
+# ============================================================
+# campus-frontend Dockerfile - 将 SPA 静态资源烘焙进 nginx 镜像
+# 构建：docker build -f Dockerfile.frontend -t campus-frontend:latest .
+# 说明：server 端纯镜像部署，无需再挂载 dist / nginx.conf 卷
+# ============================================================
+FROM nginx:alpine
+
+COPY campus-frontend/dist /usr/share/nginx/html
+COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80

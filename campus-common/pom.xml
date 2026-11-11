@@ -40,6 +40,15 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
+
+        <!-- Feign 的 Micrometer Observation 能力桥接。
+             该包是 spring-cloud-openfeign-core 的可选依赖，starter 不会传递引入；
+             缺失时 Feign 不产生客户端 span，也不会向被调方注入 W3C traceparent 头，
+             导致跨服务调用各自生成独立的 Trace（链路断裂）。 -->
+        <dependency>
+            <groupId>io.github.openfeign</groupId>
+            <artifactId>feign-micrometer</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>

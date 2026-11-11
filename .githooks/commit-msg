@@ -1,0 +1,20 @@
+#!/bin/sh
+# 校验 Conventional Commits 首行格式
+commit_msg_file="$1"
+msg=$(head -1 "$commit_msg_file")
+
+pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9/_-]+\))?!?: .+'
+
+if ! echo "$msg" | grep -Eq "$pattern"; then
+  echo "[x] 提交信息不符合 Conventional Commits 规范" >&2
+  echo "    首行应为: <type>(<scope>): <subject>" >&2
+  echo "    例: feat(auth): 支持手机号登录" >&2
+  echo "    例: fix(order): 修复并发下单库存超卖" >&2
+  echo "    允许 type: feat fix docs style refactor perf test build ci chore revert" >&2
+  exit 1
+fi
+
+if [ "${#msg}" -gt 72 ]; then
+  echo "[!] 提交首行 ${#msg} 字, 建议精简到 72 字以内(仅警告)" >&2
+fi
+exit 0

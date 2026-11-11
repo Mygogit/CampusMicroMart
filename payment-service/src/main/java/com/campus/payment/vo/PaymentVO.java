@@ -17,6 +17,9 @@ public class PaymentVO {
     /** 支付ID */
     private Long id;
 
+    /** 买家用户ID */
+    private Long userId;
+
     /** 支付单号 */
     private String paymentNo;
 
@@ -61,6 +64,7 @@ public class PaymentVO {
     public static PaymentVO from(Payment payment) {
         PaymentVO vo = new PaymentVO();
         vo.setId(payment.getId());
+        vo.setUserId(payment.getUserId());
         vo.setPaymentNo(payment.getPaymentNo());
         vo.setOrderId(payment.getOrderId());
         vo.setAmount(payment.getAmount());

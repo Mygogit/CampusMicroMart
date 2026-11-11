@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { productApi } from '../api/product'
 import { categoryApi } from '../api/category'
 
 const router = useRouter()
+
 const form = ref({
   name: '',
   description: '',
@@ -20,11 +21,15 @@ const loading = ref(false)
 const uploading = ref(false)
 const categories = ref<any[]>([])
 
+const imageList = computed(() => (form.value.images ? form.value.images.split(',').filter(Boolean) : []))
+
 onMounted(async () => {
   try {
     const res = await categoryApi.list()
     categories.value = res.data.data || []
-  } catch { /* ignore */ }
+  } catch {
+    /* 分类加载失败不阻塞发布表单，选择时为空即可 */
+  }
 })
 
 async function handleUpload(file: any) {
@@ -74,71 +79,222 @@ async function handleCreate() {
 </script>
 
 <template>
-  <div class="create-page">
-    <el-card>
-      <h2>发布商品</h2>
-      <el-form label-width="100px" style="max-width:600px">
-        <el-form-item label="商品名称" required>
-          <el-input v-model="form.name" placeholder="请输入商品名称" />
-        </el-form-item>
-        <el-form-item label="商品分类" required>
-          <el-select v-model="form.categoryId" placeholder="请选择分类" style="width:100%">
-            <el-option
+  <div class="create-page fade-up">
+    <div class="page-head">
+      <div>
+        <h1>发布闲置</h1>
+        <p class="sub">填写越完整，越容易被同学找到。提交后需经管理员审核上架。</p>
+      </div>
+    </div>
+
+    <div class="publish">
+      <div class="panel">
+        <div class="field">
+          <label for="pName">商品标题<span class="req" aria-hidden="true">*</span><span class="hint">一句话说清是什么、成色如何</span></label>
+          <input id="pName" v-model="form.name" class="input" placeholder="例如：九成新《高等数学》第七版 上下册" />
+        </div>
+
+        <div class="field">
+          <label>商品分类<span class="req" aria-hidden="true">*</span></label>
+          <div class="chip-group">
+            <button
               v-for="cat in categories"
               :key="cat.id"
-              :label="cat.name"
-              :value="cat.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="form.description" type="textarea" :rows="3" placeholder="商品描述" />
-        </el-form-item>
-        <el-form-item label="价格" required>
-          <el-input-number v-model="form.price" :min="0" :precision="2" style="width:200px" />
-        </el-form-item>
-        <el-form-item label="库存">
-          <el-input-number v-model="form.stock" :min="1" style="width:200px" />
-        </el-form-item>
-        <el-form-item label="课程代码">
-          <el-input v-model="form.courseCode" placeholder="关联课程代码（选填）" />
-        </el-form-item>
-        <el-form-item label="宿舍楼栋">
-          <el-input v-model="form.dormitory" placeholder="所在宿舍楼栋（选填）" />
-        </el-form-item>
-        <el-form-item label="商品图片">
-          <div>
-            <div v-if="form.images" class="image-previews">
-              <div v-for="(img, i) in form.images.split(',')" :key="i" class="image-preview-item">
-                <img :src="img" />
-                <el-button size="small" type="danger" :icon="'Delete'" circle @click="removeImage(i)" />
-              </div>
-            </div>
-            <el-upload
-              action=""
-              :auto-upload="false"
-              :show-file-list="false"
-              accept="image/*"
-              @change="handleUpload"
+              type="button"
+              class="chip"
+              :class="{ active: form.categoryId === cat.id }"
+              :aria-pressed="form.categoryId === cat.id"
+              @click="form.categoryId = cat.id"
             >
-              <el-button :loading="uploading" type="primary" plain>上传图片</el-button>
-            </el-upload>
+              {{ cat.name }}
+            </button>
+            <span v-if="categories.length === 0" class="t-xs t-subtle">分类加载中…</span>
           </div>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :loading="loading" @click="handleCreate">发布商品</el-button>
-          <el-button @click="router.back()">取消</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="pPrice">价格（元）<span class="req" aria-hidden="true">*</span></label>
+            <input id="pPrice" v-model.number="form.price" class="input" type="number" min="0" step="0.01" placeholder="28" />
+          </div>
+          <div class="field">
+            <label for="pStock">可售数量</label>
+            <input id="pStock" v-model.number="form.stock" class="input" type="number" min="1" placeholder="1" />
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="pCourse">课程代码<span class="hint">选填</span></label>
+            <input id="pCourse" v-model="form.courseCode" class="input" placeholder="例如：MATH101" />
+          </div>
+          <div class="field">
+            <label for="pDorm">宿舍楼栋<span class="hint">选填</span></label>
+            <input id="pDorm" v-model="form.dormitory" class="input" placeholder="例如：东区 3 号楼" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>商品图片<span class="hint">支持多张，首图将作为封面</span></label>
+
+          <div v-if="imageList.length" class="previews">
+            <div v-for="(img, i) in imageList" :key="img + i" class="preview">
+              <img :src="img" alt="" />
+              <button class="preview-del" type="button" aria-label="删除该图片" @click="removeImage(i)">
+                <svg class="icon-sm" aria-hidden="true"><use href="#i-x" /></svg>
+              </button>
+              <span v-if="i === 0" class="preview-cover">封面</span>
+            </div>
+          </div>
+
+          <el-upload
+            class="uploader"
+            drag
+            action=""
+            :auto-upload="false"
+            :show-file-list="false"
+            accept="image/*"
+            @change="handleUpload"
+          >
+            <div class="dz">
+              <svg class="ic" aria-hidden="true"><use href="#i-cam" /></svg>
+              <div class="dz-title">{{ uploading ? '上传中…' : '点击或拖拽图片到此处' }}</div>
+              <div class="dz-sub">支持 JPG / PNG，单张建议不超过 10MB</div>
+            </div>
+          </el-upload>
+        </div>
+
+        <div class="field">
+          <label for="pDesc">商品描述<span class="hint">转手原因、瑕疵、交接方式</span></label>
+          <textarea id="pDesc" v-model="form.description" class="input" placeholder="例如：考研结束转出，几乎全新无笔记，校内可面交。" />
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary lg" :disabled="loading || uploading" @click="handleCreate">
+            {{ loading ? '提交中…' : '发布商品' }}
+          </button>
+          <button class="btn btn-subtle lg" @click="router.back()">取消</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.create-page { max-width: 800px; margin: 0 auto; }
-h2 { margin-bottom: 24px; }
-.image-previews { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
-.image-preview-item { position: relative; width: 100px; height: 100px; }
-.image-preview-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
-.image-preview-item .el-button { position: absolute; top: -8px; right: -8px; }
+.publish {
+  max-width: 720px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+/* ---------- 图片预览 ---------- */
+.previews {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+.preview {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.preview-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: rgba(42, 47, 44, 0.66);
+  color: #fff;
+  transition: background var(--dur-fast) var(--ease);
+}
+.preview-del:hover {
+  background: var(--danger);
+}
+.preview-cover {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 2px 0;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(47, 169, 120, 0.9);
+}
+
+/* ---------- 上传区：把 el-upload 的拖拽容器改造成设计系统的 dropzone ---------- */
+.uploader :deep(.el-upload) {
+  display: block;
+  width: 100%;
+}
+.uploader :deep(.el-upload-dragger) {
+  width: 100%;
+  padding: var(--space-8);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  transition: all var(--dur-fast) var(--ease);
+}
+.uploader :deep(.el-upload-dragger:hover),
+.uploader :deep(.el-upload-dragger.is-dragover) {
+  border-color: var(--green-500);
+  background: var(--green-50);
+}
+.dz {
+  color: var(--text-subtle);
+}
+.dz .ic {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto var(--space-3);
+  color: var(--green-500);
+  stroke: currentColor;
+  stroke-width: 1.8;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.dz-title {
+  font-weight: 600;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+.dz-sub {
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 767px) {
+  .field-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
 </style>

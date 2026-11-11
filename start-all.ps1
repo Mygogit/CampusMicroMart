@@ -1,55 +1,39 @@
-$root = "e:\数据\CampusMicroMart"
+# CampusMicroMart - Build and Start (silent mode)
+#
+# This launcher used to spawn five minimized PowerShell windows:
+#     Start-Process powershell -ArgumentList (..., "Read-Host 'Press Enter to close'")
+#     -WindowStyle Minimized
+# and it force-stopped every java process on the machine
+# (Get-Process java | Stop-Process -Force).
+#
+# It now delegates to start-background-wmi.ps1, the canonical local launcher,
+# which creates each process through Win32_Process.Create - no console window
+# at all - and remaps product-service to 8082 / gateway to 8090 so the stack
+# can coexist with the SQB containers that hold 8081/8080.
+#
+# Original file kept as: start-all.ps1.bak-20260923
+#
+# Plain ASCII on purpose: PowerShell 5.1 reads a .ps1 without a UTF-8 BOM as
+# ANSI, so non-ASCII text here would be mangled.
+
+$root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 
-Write-Host "=== CampusMicroMart - Building ===" -ForegroundColor Cyan
+Write-Host "=== CampusMicroMart - Build and Start ===" -ForegroundColor Cyan
+Write-Host "    silent mode: no console window will pop up" -ForegroundColor DarkGray
+Write-Host ""
 
-# Build
+Write-Host "[1/2] Building services..." -ForegroundColor Cyan
 mvn clean package -DskipTests -q
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "BUILD FAILED!" -ForegroundColor Red
+    Write-Host "      BUILD FAILED!" -ForegroundColor Red
     Read-Host
     exit 1
 }
-Write-Host "Build OK" -ForegroundColor Green
+Write-Host "      Build OK." -ForegroundColor Green
 
-# Kill old Java (needs admin)
-Write-Host "`nKilling old Java processes..." -ForegroundColor Yellow
-Get-Process java -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-Start-Sleep 3
+Write-Host "[2/2] Starting services silently..." -ForegroundColor Cyan
+powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'start-background-wmi.ps1')
 
-# Start services
-Write-Host "`n=== Starting Services ===" -ForegroundColor Cyan
-
-$services = @(
-    @{Name="user-service"; Port=8084; Wait=0},
-    @{Name="product-service"; Port=8081; Wait=8},
-    @{Name="order-service"; Port=8082; Wait=10},
-    @{Name="payment-service"; Port=8083; Wait=15},
-    @{Name="campus-gateway"; Port=8080; Wait=0}
-)
-
-foreach ($svc in $services) {
-    $logFile = "$root\logs\$($svc.Name).log"
-    $jarDir = "$root\$($svc.Name)\target"
-
-    Start-Process powershell -ArgumentList @(
-        "-NoProfile", "-Command",
-        "Set-Location '$jarDir';",
-        "java -jar $($svc.Name)-1.0.0.jar 2>&1 | Out-File -FilePath '$logFile' -Encoding utf8;",
-        "Read-Host 'Press Enter to close'"
-    ) -WindowStyle Minimized
-
-    Write-Host "  $($svc.Name) (port $($svc.Port)) - started" -ForegroundColor Green
-
-    if ($svc.Wait -gt 0) {
-        Start-Sleep $svc.Wait
-    }
-}
-
-Write-Host "`n=== All services launched! ===" -ForegroundColor Green
-Write-Host "Gateway: http://localhost:8080" -ForegroundColor Cyan
-Write-Host "Product: http://localhost:8081"
-Write-Host "Order:   http://localhost:8082"
-Write-Host "Payment: http://localhost:8083"
-Write-Host "User:    http://localhost:8084"
-Read-Host "`nPress Enter to exit"
+Write-Host ""
+Read-Host "Press Enter to exit"

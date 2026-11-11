@@ -133,6 +133,14 @@ copy /Y product-service\target\product-service-1.0.0.jar "%DIST%\app\product-ser
 copy /Y order-service\target\order-service-1.0.0.jar "%DIST%\app\order-service.jar"
 copy /Y payment-service\target\payment-service-1.0.0.jar "%DIST%\app\payment-service.jar"
 
+:: 前端网页服务器（FrontendServer）独立运行所需：Spring Boot fat jar 内的
+:: BOOT-INF/classes 无法用 -cp 加载，故单独放一份编译产物
+echo   复制前端服务器类文件...
+xcopy /E /Y /Q "campus-gateway\target\classes\*" "%DIST%\app\gateway-classes\" >nul
+if not exist "%DIST%\app\gateway-classes\com\campus\gateway\FrontendServer.class" (
+    echo   [警告] 未找到 FrontendServer.class，前端网页服务器可能无法启动
+)
+
 echo [4/6] 复制内嵌中间件...
 :: 内嵌 JDK
 mkdir "%DIST%\jdk" 2>nul
@@ -183,231 +191,24 @@ if exist "campus-frontend\dist" (
 :: ============================================
 echo [6/6] 生成启动脚本...
 
-> "%DIST%\启动.bat" (
-echo @echo off
-echo chcp 65001 ^>nul
-echo title 校园二手交易平台 - 启动中...
-echo cd /d "%%~dp0"
-echo.
-echo set JAVA_HOME=%%~dp0jdk
-echo set PATH=%%JAVA_HOME%%\bin;%%PATH%%
-echo.
-echo set MARIADB_HOME=%%~dp0mariadb
-echo set REDIS_HOME=%%~dp0redis
-echo set DATA_DIR=%%~dp0data
-echo.
-echo REM === 检查依赖文件完整性 ===
-echo if not exist "%%MARIADB_HOME%%\bin\mysqld.exe" (
-echo     echo [错误] 缺少文件: %%MARIADB_HOME%%\bin\mysqld.exe
-echo     echo 安装包不完整，请重新获取完整安装包！
-echo     pause
-echo     exit /b 1
-echo ^)
-echo if not exist "%%REDIS_HOME%%\redis-server.exe" (
-echo     echo [错误] 缺少文件: %%REDIS_HOME%%\redis-server.exe
-echo     echo 安装包不完整，请重新获取完整安装包！
-echo     pause
-echo     exit /b 1
-echo ^)
-echo if not exist "%%JAVA_HOME%%\bin\javaw.exe" (
-echo     echo [错误] 缺少文件: %%JAVA_HOME%%\bin\javaw.exe
-echo     echo 安装包不完整，请重新获取完整安装包！
-echo     pause
-echo     exit /b 1
-echo ^)
-echo.
-echo echo ================================================
-echo echo   校园二手交易平台 v1.0.0 正在启动...
-echo echo   内嵌 MariaDB ^| Redis ^| JDK ^| 5 微服务
-echo echo ================================================
-echo echo.
-echo.
-echo REM === 检查端口占用 ===
-echo echo [检查] 端口占用检测...
-echo netstat -ano ^| findstr ":3306 " ^>nul 2^>^&1
-echo if %%errorlevel%% equ 0 (
-echo     echo [警告] 端口 3306 已被占用，请先关闭占用 3306 端口的程序！
-echo     echo        可能是本地已安装的 MySQL 服务
-echo     pause
-echo     exit /b 1
-echo ^)
-echo netstat -ano ^| findstr ":6379 " ^>nul 2^>^&1
-echo if %%errorlevel%% equ 0 (
-echo     echo [警告] 端口 6379 已被占用，请先关闭占用 6379 端口的程序！
-echo     pause
-echo     exit /b 1
-echo ^)
-echo.
-echo REM === 1. 初始化 MariaDB (首次运行) ===
-echo if not exist "%%DATA_DIR%%\mysql" (
-echo     echo [1/8] 首次运行 - 初始化 MariaDB 数据目录...
-echo     mkdir "%%DATA_DIR%%\mysql" 2^>nul
-echo.
-echo     REM 创建 MariaDB 配置文件
-echo     ^(
-echo         echo [mysqld]
-echo         echo port=3306
-echo         echo basedir=%%MARIADB_HOME%%
-echo         echo datadir=%%DATA_DIR%%\mysql
-echo         echo character-set-server=utf8mb4
-echo         echo collation-server=utf8mb4_unicode_ci
-echo         echo default-storage-engine=InnoDB
-echo         echo max_connections=100
-echo         echo innodb_buffer_pool_size=128M
-echo         echo skip-log-bin
-echo         echo sql_mode=NO_ENGINE_SUBSTITUTION
-echo         echo default_authentication_plugin=mysql_native_password
-echo         echo.
-echo         echo [client]
-echo         echo default-character-set=utf8mb4
-echo         echo port=3306
-echo         echo user=root
-echo         echo password=campus123
-echo     ^) ^> "%%DATA_DIR%%\mysql\my.ini"
-echo.
-echo     REM 初始化数据目录（无密码 root 用户）
-echo     "%%MARIADB_HOME%%\bin\mysqld.exe" --defaults-file="%%DATA_DIR%%\mysql\my.ini" --initialize-insecure --console
-echo     echo   MariaDB 数据目录初始化完成
-echo ^)
-echo.
-echo REM === 2. 启动 MariaDB ===
-echo echo [2/8] 启动 MariaDB (端口 3306)...
-echo start /MIN "MariaDB" "%%MARIADB_HOME%%\bin\mysqld.exe" --defaults-file="%%DATA_DIR%%\mysql\my.ini"
-echo.
-echo REM 等待 MariaDB 就绪
-echo echo   等待 MariaDB 启动...
-echo set MYSQL_READY=0
-echo for /L %%%%i in (1,1,30^) do (
-echo     "%%MARIADB_HOME%%\bin\mysqladmin.exe" -u root --skip-password ping 2^>nul ^>nul
-echo     if %%%%errorlevel%%%% equ 0 (
-echo         set MYSQL_READY=1
-echo         goto :mysql_ready
-echo     ^)
-echo     timeout /t 1 /nobreak ^>nul
-echo ^)
-echo :mysql_ready
-echo if %%MYSQL_READY%% equ 0 (
-echo     echo [错误] MariaDB 启动超时！
-echo     pause
-echo     exit /b 1
-echo ^)
-echo echo   MariaDB 已就绪
-echo.
-echo REM === 3. 首次运行 - 设置密码 + 初始化数据库 ===
-echo if not exist "%%DATA_DIR%%\mysql\.initialized" (
-echo     echo [3/8] 首次运行 - 设置密码并初始化数据库...
-echo.
-echo     REM 设置 root 密码
-echo     "%%MARIADB_HOME%%\bin\mysql.exe" -u root --skip-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'campus123'; FLUSH PRIVILEGES;" 2^>nul
-echo.
-echo     REM 创建数据库并导入表结构
-echo     "%%MARIADB_HOME%%\bin\mysql.exe" -u root -pcampus123 ^< "%%~dp0sql\init.sql" 2^>nul
-echo     echo   数据库表结构初始化完成
-echo.
-echo     REM 导入管理员账号
-echo     "%%MARIADB_HOME%%\bin\mysql.exe" -u root -pcampus123 ^< "%%~dp0sql\init_admin.sql" 2^>nul
-echo     echo   管理员账号初始化完成
-echo.
-echo     REM 标记已初始化
-echo     echo initialized ^> "%%DATA_DIR%%\mysql\.initialized"
-echo ^)
-echo.
-echo REM === 4. 启动 Redis ===
-echo echo [4/8] 启动 Redis (端口 6379)...
-echo mkdir "%%DATA_DIR%%\redis" 2^>nul
-echo start /MIN "Redis" "%%REDIS_HOME%%\redis-server.exe" --port 6379 --dir "%%DATA_DIR%%\redis" --maxmemory 128mb
-echo timeout /t 2 /nobreak ^>nul
-echo echo   Redis 已启动
-echo.
-echo REM === 5-9. 启动微服务 ===
-echo echo [5/8] 启动用户服务 :8084...
-echo start /MIN "UserService" "%%JAVA_HOME%%\bin\javaw" -jar app\user-service.jar --spring.profiles.active=standalone
-echo.
-echo echo [6/8] 启动商品服务 :8081...
-echo start /MIN "ProductService" "%%JAVA_HOME%%\bin\javaw" -jar app\product-service.jar --spring.profiles.active=standalone
-echo.
-echo echo [7/8] 启动订单服务 :8083...
-echo start /MIN "OrderService" "%%JAVA_HOME%%\bin\javaw" -jar app\order-service.jar --spring.profiles.active=standalone
-echo.
-echo echo [8/8] 启动支付服务 :8085...
-echo start /MIN "PaymentService" "%%JAVA_HOME%%\bin\javaw" -jar app\payment-service.jar --spring.profiles.active=standalone
-echo.
-echo REM 等待业务服务启动
-echo echo   等待业务服务启动 (约 20 秒)...
-echo timeout /t 20 /nobreak ^>nul
-echo.
-echo REM 启动网关（最后启动，依赖后端服务）
-echo echo [网关] 启动网关 :8080...
-echo start /MIN "Gateway" "%%JAVA_HOME%%\bin\javaw" -jar app\campus-gateway.jar --spring.profiles.active=standalone
-echo timeout /t 5 /nobreak ^>nul
-echo.
-echo REM === 启动前端 ===
-echo echo [前端] 启动网页服务器 :80...
-echo start /MIN "Frontend" "%%JAVA_HOME%%\bin\javaw" -cp app\campus-gateway.jar com.campus.gateway.FrontendServer 80 frontend
-echo.
-echo REM === 打开浏览器 ===
-echo echo ================================================
-echo echo   启动完成！
-echo echo ================================================
-echo echo   管理后台: http://localhost
-echo echo   管理员:   admin / admin123
-echo echo ================================================
-echo echo.
-echo start http://localhost
-echo echo.
-echo echo 按任意键关闭此窗口 (不会关闭后台服务)...
-echo pause ^>nul
+:: ============================================
+:: 生成启动 / 停止脚本
+::   ——内容由仓库 dist-templates\ 统一维护，改模板即生效，勿直接改本文件
+::   ——服务全部通过 _hidden.ps1 以 CreateNoWindow 方式静默启动，不弹控制台窗口
+:: ============================================
+:: 模板以 UTF-8 维护；生成的 .bat 必须是 GBK(936) + CRLF，
+:: 否则 cmd 按系统 OEM 代码页误读中文并丢字节（netstat 变 etstat）
+copy /Y "%~dp0dist-templates\_hidden.ps1" "%DIST%\_hidden.ps1" >nul
+if not exist "%DIST%\_hidden.ps1" (
+    echo   [ERROR] missing dist-templates\_hidden.ps1
+    pause && exit /b 1
 )
-
-> "%DIST%\停止.bat" (
-echo @echo off
-echo chcp 65001 ^>nul
-echo title 校园二手交易平台 - 停止中...
-echo cd /d "%%~dp0"
-echo.
-echo echo ================================================
-echo echo   正在停止校园二手交易平台...
-echo echo ================================================
-echo echo.
-echo.
-echo REM 停止前端
-echo echo [1/6] 停止前端服务...
-echo taskkill /F /FI "WINDOWTITLE eq Frontend" 2^>nul
-echo.
-echo REM 停止网关
-echo echo [2/6] 停止网关服务...
-echo taskkill /F /FI "WINDOWTITLE eq Gateway" 2^>nul
-echo.
-echo REM 停止业务服务（按依赖倒序）
-echo echo [3/6] 停止微服务...
-echo taskkill /F /FI "WINDOWTITLE eq PaymentService" 2^>nul
-echo taskkill /F /FI "WINDOWTITLE eq OrderService" 2^>nul
-echo taskkill /F /FI "WINDOWTITLE eq ProductService" 2^>nul
-echo taskkill /F /FI "WINDOWTITLE eq UserService" 2^>nul
-echo.
-echo REM 停止 Redis
-echo echo [4/6] 停止 Redis...
-echo "%%~dp0redis\redis-cli.exe" -p 6379 SHUTDOWN 2^>nul
-echo taskkill /F /FI "WINDOWTITLE eq Redis" 2^>nul
-echo.
-echo REM 停止 MariaDB
-echo echo [5/6] 停止 MariaDB...
-echo "%%~dp0mariadb\bin\mysqladmin.exe" -u root -pcampus123 -h 127.0.0.1 shutdown 2^>nul
-echo taskkill /F /FI "WINDOWTITLE eq MariaDB" 2^>nul
-echo.
-echo REM 清理临时文件
-echo echo [6/6] 清理...
-echo taskkill /F /IM javaw.exe /FI "WINDOWTITLE eq *Service" 2^>nul
-echo taskkill /F /IM javaw.exe /FI "WINDOWTITLE eq Gateway" 2^>nul
-echo taskkill /F /IM javaw.exe /FI "WINDOWTITLE eq Frontend" 2^>nul
-echo.
-echo echo ================================================
-echo echo   所有服务已停止，可以安全关闭此窗口
-echo echo   数据保存在 .\data\ 目录，下次启动自动恢复
-echo echo ================================================
-echo echo.
-echo pause
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0dist-templates\_prepare.ps1" -Src "%~dp0dist-templates" -Dst "%DIST%"
+if errorlevel 1 (
+    echo   [ERROR] failed to generate start/stop bat from dist-templates
+    pause && exit /b 1
 )
+echo   start/stop scripts ready (silent hidden start, no console windows)
 
 :: ============================================
 :: 生成 增量更新.bat

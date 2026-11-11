@@ -1,12 +1,29 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { userApi } from '../api/user'
+import AuthShell from '../components/AuthShell.vue'
 
 const router = useRouter()
+
 const form = ref({ username: '', password: '', nickname: '', phone: '' })
+const confirmPwd = ref('')
+const agreed = ref(false)
 const loading = ref(false)
+const showPwd = ref(false)
+
+/** 密码强度：长度 / 大小写混合 / 数字+符号 三段计分 */
+const pwdLevel = computed(() => {
+  const v = form.value.password
+  if (!v) return 0
+  let level = 0
+  if (v.length >= 8) level++
+  if (/[A-Z]/.test(v) && /[a-z]/.test(v)) level++
+  if (/[0-9]/.test(v) && /[^A-Za-z0-9]/.test(v)) level++
+  return level
+})
+const pwdLevelText = computed(() => ['弱', '中', '强'][pwdLevel.value - 1] || '弱')
 
 async function handleRegister() {
   if (!form.value.username || !form.value.password) {
@@ -19,6 +36,14 @@ async function handleRegister() {
   }
   if (form.value.password.length < 6) {
     ElMessage.warning('密码长度至少6位')
+    return
+  }
+  if (confirmPwd.value !== form.value.password) {
+    ElMessage.warning('两次输入的密码不一致')
+    return
+  }
+  if (!agreed.value) {
+    ElMessage.warning('请先阅读并同意用户协议与隐私政策')
     return
   }
   loading.value = true
@@ -37,234 +62,86 @@ async function handleRegister() {
 </script>
 
 <template>
-  <div class="register-page">
-    <div class="register-container">
-      <div class="register-card">
-        <div class="register-header">
-          <div class="logo-wrapper">
-            <el-icon class="logo-icon"><UserFilled /></el-icon>
-          </div>
-          <h1 class="register-title">加入校园微集市</h1>
-          <p class="register-subtitle">创建一个账号，开始你的购物之旅</p>
-        </div>
+  <AuthShell headline="让闲置，遇见下一个主人" blurb="完成校园实名注册，即可发布闲置、收发消息，与同校同学放心交易。">
+    <div class="login-card">
+      <h1>创建账号</h1>
+      <p class="login-sub">填写基础信息，加入校园集市</p>
 
-        <el-form @submit.prevent="handleRegister" class="register-form">
-          <el-form-item>
-            <div class="input-wrapper">
-              <el-icon class="input-icon"><User /></el-icon>
-              <el-input v-model="form.username" placeholder="请输入用户名" size="large" />
-            </div>
-          </el-form-item>
-
-          <el-form-item>
-            <div class="input-wrapper">
-              <el-icon class="input-icon"><Lock /></el-icon>
-              <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password size="large" />
-            </div>
-          </el-form-item>
-
-          <el-form-item>
-            <div class="input-wrapper">
-              <el-icon class="input-icon"><Avatar /></el-icon>
-              <el-input v-model="form.nickname" placeholder="昵称（选填）" size="large" />
-            </div>
-          </el-form-item>
-
-          <el-form-item>
-            <div class="input-wrapper">
-              <el-icon class="input-icon"><Phone /></el-icon>
-              <el-input v-model="form.phone" placeholder="手机号（选填）" size="large" />
-            </div>
-          </el-form-item>
-
-          <el-form-item>
-            <el-button type="primary" :loading="loading" @click="handleRegister" class="register-btn" size="large">
-              <el-icon><Check /></el-icon>
-              注册
-            </el-button>
-          </el-form-item>
-        </el-form>
-
-        <div class="register-footer">
-          <p class="tip">
-            已有账号？
-            <router-link to="/login" class="link-btn">立即登录</router-link>
-          </p>
-        </div>
+      <div class="auth-tabs" role="tablist" aria-label="登录或注册">
+        <router-link class="auth-tab" to="/login" role="tab" aria-selected="false">登录</router-link>
+        <router-link class="auth-tab" to="/register" role="tab" aria-selected="true">注册</router-link>
       </div>
 
-      <div class="decoration decoration-1"></div>
-      <div class="decoration decoration-2"></div>
-      <div class="decoration decoration-3"></div>
+      <form novalidate @submit.prevent="handleRegister">
+        <div class="field-compact">
+          <label for="regUsername">用户名<span class="req" aria-hidden="true">*</span></label>
+          <input
+            id="regUsername"
+            v-model="form.username"
+            class="input"
+            type="text"
+            placeholder="至少 3 位，用于登录"
+            autocomplete="username"
+            required
+          />
+        </div>
+
+        <div class="field-compact">
+          <label for="regNickname">昵称</label>
+          <input id="regNickname" v-model="form.nickname" class="input" type="text" placeholder="集市里想被怎么称呼" />
+        </div>
+
+        <div class="field-compact">
+          <label for="regPhone">手机号</label>
+          <input id="regPhone" v-model="form.phone" class="input" type="text" placeholder="13800000000（选填）" autocomplete="tel" />
+        </div>
+
+        <div class="field-compact">
+          <label for="regPwd">设置密码<span class="req" aria-hidden="true">*</span></label>
+          <div class="input-wrap" style="margin-bottom: 0">
+            <input
+              id="regPwd"
+              v-model="form.password"
+              class="input has-suf"
+              :type="showPwd ? 'text' : 'password'"
+              placeholder="至少 6 位"
+              autocomplete="new-password"
+              aria-describedby="regPwdHint"
+              required
+            />
+            <button
+              type="button"
+              class="input-suf"
+              :aria-label="showPwd ? '隐藏密码' : '显示密码'"
+              @click="showPwd = !showPwd"
+            >
+              <svg class="icon" aria-hidden="true"><use :href="showPwd ? '#i-eye-off' : '#i-eye'" /></svg>
+            </button>
+          </div>
+          <div id="regPwdHint" class="pwd-strength" :data-level="pwdLevel" aria-live="polite">
+            <i /><i /><i /><em>{{ pwdLevelText }}</em>
+          </div>
+        </div>
+
+        <div class="field-compact">
+          <label for="regConfirm">确认密码<span class="req" aria-hidden="true">*</span></label>
+          <input id="regConfirm" v-model="confirmPwd" class="input" :type="showPwd ? 'text' : 'password'" placeholder="再次输入密码" autocomplete="new-password" required />
+        </div>
+
+        <label class="agree">
+          <input v-model="agreed" type="checkbox" />
+          <span>我已阅读并同意<a href="#" @click.prevent>《用户协议》</a>与<a href="#" @click.prevent>《隐私政策》</a></span>
+        </label>
+
+        <button class="btn btn-primary lg block" type="submit" :disabled="loading">
+          {{ loading ? '注册中…' : '注册' }}
+        </button>
+      </form>
+
+      <p class="auth-foot">
+        已有账号？
+        <router-link to="/login">返回登录</router-link>
+      </p>
     </div>
-  </div>
+  </AuthShell>
 </template>
-
-<style scoped>
-.register-page {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 24px;
-}
-
-.register-container {
-  position: relative;
-  width: 100%;
-  max-width: 480px;
-}
-
-.register-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 24px;
-  padding: 48px 40px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  position: relative;
-  z-index: 10;
-}
-
-.register-header {
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.logo-wrapper {
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 20px;
-  box-shadow: 0 8px 24px rgba(17, 153, 142, 0.3);
-}
-
-.logo-icon {
-  font-size: 44px;
-  color: white;
-}
-
-.register-title {
-  font-size: 28px;
-  font-weight: 700;
-  margin: 0 0 8px;
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.register-subtitle {
-  color: #909399;
-  font-size: 14px;
-  margin: 0;
-}
-
-.register-form {
-  margin-bottom: 24px;
-}
-
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: 16px;
-  z-index: 10;
-  font-size: 18px;
-  color: #909399;
-}
-
-.input-wrapper :deep(.el-input__wrapper) {
-  padding-left: 44px !important;
-  border-radius: 12px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
-  transition: all 0.3s;
-}
-
-.input-wrapper :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 4px 12px rgba(17, 153, 142, 0.15) !important;
-}
-
-.input-wrapper :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 3px rgba(17, 153, 142, 0.2), 0 4px 12px rgba(17, 153, 142, 0.15) !important;
-}
-
-.register-btn {
-  width: 100%;
-  height: 48px;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  border: none;
-  box-shadow: 0 6px 20px rgba(17, 153, 142, 0.35);
-  transition: all 0.3s;
-}
-
-.register-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(17, 153, 142, 0.45);
-}
-
-.register-footer {
-  text-align: center;
-}
-
-.tip {
-  color: #909399;
-  font-size: 14px;
-  margin: 0;
-}
-
-.link-btn {
-  color: #11998e;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all 0.3s;
-}
-
-.link-btn:hover {
-  color: #38ef7d;
-}
-
-.decoration {
-  position: absolute;
-  border-radius: 50%;
-  opacity: 0.4;
-  z-index: 1;
-}
-
-.decoration-1 {
-  width: 200px;
-  height: 200px;
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  top: -60px;
-  right: -80px;
-  filter: blur(20px);
-}
-
-.decoration-2 {
-  width: 150px;
-  height: 150px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  bottom: -40px;
-  left: -50px;
-  filter: blur(16px);
-}
-
-.decoration-3 {
-  width: 100px;
-  height: 100px;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  bottom: 100px;
-  right: -40px;
-  filter: blur(12px);
-}
-</style>

@@ -1,15 +1,28 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { userApi } from '../api/user'
 import { useAuthStore } from '../stores/auth'
+import AuthShell from '../components/AuthShell.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
 
+const REMEMBER_KEY = 'campus_remember_username'
+
 const form = ref({ username: '', password: '' })
 const loading = ref(false)
+const showPwd = ref(false)
+const remember = ref(false)
+
+onMounted(() => {
+  const saved = localStorage.getItem(REMEMBER_KEY)
+  if (saved) {
+    form.value.username = saved
+    remember.value = true
+  }
+})
 
 async function handleLogin() {
   if (!form.value.username || !form.value.password) {
@@ -26,6 +39,13 @@ async function handleLogin() {
       const padded = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=')
       const payload = JSON.parse(atob(padded))
       auth.setAuth(token, payload.role || 'STUDENT', String(payload.userId))
+
+      if (remember.value) {
+        localStorage.setItem(REMEMBER_KEY, form.value.username)
+      } else {
+        localStorage.removeItem(REMEMBER_KEY)
+      }
+
       ElMessage.success('登录成功')
       router.push('/')
     } else {
@@ -35,223 +55,80 @@ async function handleLogin() {
     loading.value = false
   }
 }
+
+function handleForgot() {
+  ElMessage.info('请携带校园证件到信息中心重置密码')
+}
 </script>
 
 <template>
-  <div class="login-page">
-    <div class="login-container">
-      <div class="login-card">
-        <div class="login-header">
-          <div class="logo-wrapper">
-            <el-icon class="logo-icon"><Shop /></el-icon>
-          </div>
-          <h1 class="login-title">校园微集市</h1>
-          <p class="login-subtitle">欢迎回来！请登录你的账号</p>
-        </div>
+  <AuthShell headline="同学，欢迎回到集市" blurb="校内实名、信用可见，买卖更安心。用你的校园账号登录即可开张。">
+    <div class="login-card">
+      <h1>欢迎回来</h1>
+      <p class="login-sub">登录到校园集市，继续你的闲置流转</p>
 
-        <el-form @submit.prevent="handleLogin" class="login-form">
-          <el-form-item>
-            <div class="input-wrapper">
-              <el-icon class="input-icon"><User /></el-icon>
-              <el-input v-model="form.username" placeholder="请输入用户名" size="large" />
-            </div>
-          </el-form-item>
-
-          <el-form-item>
-            <div class="input-wrapper">
-              <el-icon class="input-icon"><Lock /></el-icon>
-              <el-input v-model="form.password" type="password" placeholder="请输入密码" show-password size="large" />
-            </div>
-          </el-form-item>
-
-          <el-form-item>
-            <el-button type="primary" :loading="loading" @click="handleLogin" class="login-btn" size="large">
-              <el-icon><ArrowRight /></el-icon>
-              登录
-            </el-button>
-          </el-form-item>
-        </el-form>
-
-        <div class="login-footer">
-          <p class="tip">
-            还没有账号？
-            <router-link to="/register" class="link-btn">立即注册</router-link>
-          </p>
-        </div>
+      <div class="auth-tabs" role="tablist" aria-label="登录或注册">
+        <router-link class="auth-tab" to="/login" role="tab" aria-selected="true">登录</router-link>
+        <router-link class="auth-tab" to="/register" role="tab" aria-selected="false">注册</router-link>
       </div>
 
-      <div class="decoration decoration-1"></div>
-      <div class="decoration decoration-2"></div>
-      <div class="decoration decoration-3"></div>
+      <form novalidate @submit.prevent="handleLogin">
+        <div class="input-wrap">
+          <svg class="icon input-pre" aria-hidden="true"><use href="#i-user" /></svg>
+          <input
+            v-model="form.username"
+            class="input has-icon"
+            type="text"
+            placeholder="学号 / 用户名"
+            autocomplete="username"
+            aria-label="学号或用户名"
+            required
+          />
+        </div>
+
+        <div class="input-wrap">
+          <svg class="icon input-pre" aria-hidden="true"><use href="#i-lock" /></svg>
+          <input
+            v-model="form.password"
+            class="input has-icon has-suf"
+            :type="showPwd ? 'text' : 'password'"
+            placeholder="密码"
+            autocomplete="current-password"
+            aria-label="密码"
+            required
+          />
+          <button
+            type="button"
+            class="input-suf"
+            :aria-label="showPwd ? '隐藏密码' : '显示密码'"
+            @click="showPwd = !showPwd"
+          >
+            <svg class="icon" aria-hidden="true"><use :href="showPwd ? '#i-eye-off' : '#i-eye'" /></svg>
+          </button>
+        </div>
+
+        <div class="login-row">
+          <label class="remember">
+            <input v-model="remember" type="checkbox" />
+            记住用户名
+          </label>
+          <a class="forgot" href="#" @click.prevent="handleForgot">忘记密码？</a>
+        </div>
+
+        <button class="btn btn-primary lg block" type="submit" :disabled="loading">
+          {{ loading ? '登录中…' : '登录' }}
+        </button>
+
+        <button class="btn btn-ghost block" type="button" style="margin-top: var(--space-3)" @click="handleForgot">
+          <svg class="icon-sm" aria-hidden="true"><use href="#i-shield" /></svg>
+          校园统一认证登录
+        </button>
+      </form>
+
+      <p class="auth-foot">
+        还没有账号？
+        <router-link to="/register">立即注册</router-link>
+      </p>
     </div>
-  </div>
+  </AuthShell>
 </template>
-
-<style scoped>
-.login-page {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 24px;
-}
-
-.login-container {
-  position: relative;
-  width: 100%;
-  max-width: 480px;
-}
-
-.login-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-radius: 24px;
-  padding: 48px 40px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  position: relative;
-  z-index: 10;
-}
-
-.login-header {
-  text-align: center;
-  margin-bottom: 40px;
-}
-
-.logo-wrapper {
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 20px;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
-}
-
-.logo-icon {
-  font-size: 44px;
-  color: white;
-}
-
-.login-title {
-  font-size: 28px;
-  font-weight: 700;
-  margin: 0 0 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.login-subtitle {
-  color: #909399;
-  font-size: 14px;
-  margin: 0;
-}
-
-.login-form {
-  margin-bottom: 24px;
-}
-
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: 16px;
-  z-index: 10;
-  font-size: 18px;
-  color: #909399;
-}
-
-.input-wrapper :deep(.el-input__wrapper) {
-  padding-left: 44px !important;
-  border-radius: 12px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
-  transition: all 0.3s;
-}
-
-.input-wrapper :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15) !important;
-}
-
-.input-wrapper :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2), 0 4px 12px rgba(102, 126, 234, 0.15) !important;
-}
-
-.login-btn {
-  width: 100%;
-  height: 48px;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
-  transition: all 0.3s;
-}
-
-.login-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(102, 126, 234, 0.45);
-}
-
-.login-footer {
-  text-align: center;
-}
-
-.tip {
-  color: #909399;
-  font-size: 14px;
-  margin: 0;
-}
-
-.link-btn {
-  color: #667eea;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all 0.3s;
-}
-
-.link-btn:hover {
-  color: #764ba2;
-}
-
-.decoration {
-  position: absolute;
-  border-radius: 50%;
-  opacity: 0.4;
-  z-index: 1;
-}
-
-.decoration-1 {
-  width: 200px;
-  height: 200px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  top: -60px;
-  left: -80px;
-  filter: blur(20px);
-}
-
-.decoration-2 {
-  width: 150px;
-  height: 150px;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  bottom: -40px;
-  right: -50px;
-  filter: blur(16px);
-}
-
-.decoration-3 {
-  width: 100px;
-  height: 100px;
-  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  bottom: 100px;
-  left: -40px;
-  filter: blur(12px);
-}
-</style>

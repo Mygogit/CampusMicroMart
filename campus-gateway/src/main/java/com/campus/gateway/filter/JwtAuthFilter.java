@@ -36,7 +36,8 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             "/api/product/list",
             "/api/product/search",
             "/api/category/list",
-            "/api/uploads",
+            "/api/payment/callback",
+            "/uploads",
             "/doc.html",
             "/webjars",
             "/v3/api-docs",
@@ -53,13 +54,23 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
 
+        // 始终剥离客户端可能伪造的内部服务令牌 / 身份头，防止外部请求冒充内部调用
+        ServerHttpRequest cleanedRequest = exchange.getRequest().mutate()
+                .headers(headers -> {
+                    headers.remove("X-Internal-Token");
+                    headers.remove("X-User-Id");
+                    headers.remove("X-User-Role");
+                })
+                .build();
+        ServerWebExchange cleanedExchange = exchange.mutate().request(cleanedRequest).build();
+
         if (isPublicPath(path)) {
-            return chain.filter(exchange);
+            return chain.filter(cleanedExchange);
         }
 
-        String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+        String authHeader = cleanedRequest.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return unauthorized(exchange, "缺少认证令牌");
+            return unauthorized(cleanedExchange, "缺少认证令牌");
         }
 
         String token = authHeader.substring(7);
@@ -67,20 +78,20 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         try {
             claims = parseToken(token);
         } catch (ExpiredJwtException e) {
-            return unauthorized(exchange, "令牌已过期");
+            return unauthorized(cleanedExchange, "令牌已过期");
         } catch (SecurityException | MalformedJwtException | UnsupportedJwtException | IllegalArgumentException e) {
-            return unauthorized(exchange, "无效的认证令牌");
+            return unauthorized(cleanedExchange, "无效的认证令牌");
         }
 
         Long userId = claims.get("userId", Long.class);
         String role = claims.get("role", String.class);
 
-        ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+        ServerHttpRequest mutatedRequest = cleanedRequest.mutate()
                 .header("X-User-Id", String.valueOf(userId))
                 .header("X-User-Role", role)
                 .build();
 
-        return chain.filter(exchange.mutate().request(mutatedRequest).build());
+        return chain.filter(cleanedExchange.mutate().request(mutatedRequest).build());
     }
 
     @Override

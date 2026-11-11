@@ -8,7 +8,6 @@ import org.yaml.snakeyaml.Yaml;
 import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -87,6 +86,7 @@ public class NacosPermissionLoader {
                 rule.setPath((String) item.get("path"));
                 rule.setMethod((String) item.getOrDefault("method", "ALL"));
                 rule.setPermitAll(Boolean.TRUE.equals(item.get("permitAll")));
+                rule.setInternalOnly(Boolean.TRUE.equals(item.get("internalOnly")));
                 if (!rule.isPermitAll() && item.containsKey("requiredRoles")) {
                     List<String> roles = (List<String>) item.get("requiredRoles");
                     rule.setRequiredRoles(roles.stream().collect(Collectors.toSet()));
@@ -104,27 +104,45 @@ public class NacosPermissionLoader {
     private void loadDefaultRules() {
         List<PermissionRule> rules = new ArrayList<>();
 
+        // ===== 匿名可访问（permitAll）=====
         rules.add(new PermissionRule("/user/login", "POST", null, true));
         rules.add(new PermissionRule("/user/register", "POST", null, true));
-        rules.add(new PermissionRule("/product/deduct", "POST", null, true));
-        rules.add(new PermissionRule("/product/rollback", "POST", null, true));
-        rules.add(new PermissionRule("/order/status", "PUT", null, true));
-        rules.add(new PermissionRule("/order/exists/**", "ALL", null, true));
+        rules.add(new PermissionRule("/product/list", "GET", null, true));
+        rules.add(new PermissionRule("/product/search", "GET", null, true));
+        rules.add(new PermissionRule("/category/list", "GET", null, true));
+        rules.add(new PermissionRule("/uploads/**", "GET", null, true));
+        rules.add(new PermissionRule("/payment/callback", "POST", null, true));
         rules.add(new PermissionRule("/doc.html", "ALL", null, true));
         rules.add(new PermissionRule("/webjars/**", "ALL", null, true));
         rules.add(new PermissionRule("/v3/api-docs/**", "ALL", null, true));
         rules.add(new PermissionRule("/swagger-resources/**", "ALL", null, true));
         rules.add(new PermissionRule("/actuator/**", "ALL", null, true));
 
+        // ===== 内部服务调用（internalOnly，仅携带内部令牌的 Feign 可访问）=====
+        rules.add(new PermissionRule("/product/deduct", "POST", null, false, true));
+        rules.add(new PermissionRule("/product/rollback", "POST", null, false, true));
+        rules.add(new PermissionRule("/product/*/mark-sold", "PUT", null, false, true));
+        rules.add(new PermissionRule("/order/status", "PUT", null, false, true));
+        rules.add(new PermissionRule("/order/exists/**", "ALL", null, false, true));
+        rules.add(new PermissionRule("/order/*/cancel-internal", "POST", null, false, true));
+        rules.add(new PermissionRule("/user/deposit/freeze", "POST", null, false, true));
+        rules.add(new PermissionRule("/user/deposit/unfreeze", "POST", null, false, true));
+        rules.add(new PermissionRule("/user/deposit/deduct", "POST", null, false, true));
+        rules.add(new PermissionRule("/user/deposit/credit", "POST", null, false, true));
+
+        // ===== 管理员（ADMIN）=====
         rules.add(new PermissionRule("/product/audit/**", "ALL", Set.of("ADMIN"), false));
         rules.add(new PermissionRule("/product/pending", "ALL", Set.of("ADMIN"), false));
         rules.add(new PermissionRule("/product/**", "DELETE", Set.of("ADMIN"), false));
-        rules.add(new PermissionRule("/order/ship/**", "ALL", Set.of("ADMIN"), false));
-        rules.add(new PermissionRule("/order/export", "ALL", Set.of("ADMIN"), false));
+        rules.add(new PermissionRule("/order/*/ship", "POST", Set.of("ADMIN"), false));
+        rules.add(new PermissionRule("/order/export", "GET", Set.of("ADMIN"), false));
+        rules.add(new PermissionRule("/order/export/**", "ALL", Set.of("ADMIN"), false));
         rules.add(new PermissionRule("/order/batch/**", "ALL", Set.of("ADMIN"), false));
         rules.add(new PermissionRule("/admin/**", "ALL", Set.of("ADMIN"), false));
         rules.add(new PermissionRule("/user/admin/**", "ALL", Set.of("ADMIN"), false));
-        rules.add(new PermissionRule("/user/deposit/**", "ALL", Set.of("ADMIN"), false));
+        rules.add(new PermissionRule("/category", "POST", Set.of("ADMIN"), false));
+        rules.add(new PermissionRule("/category", "PUT", Set.of("ADMIN"), false));
+        rules.add(new PermissionRule("/category/**", "DELETE", Set.of("ADMIN"), false));
 
         permissionRules = rules;
         log.info("Loaded {} default permission rules", rules.size());

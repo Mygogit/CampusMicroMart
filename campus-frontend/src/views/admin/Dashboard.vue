@@ -1,100 +1,209 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { orderApi } from '../../api/order'
 import { productApi } from '../../api/product'
 import { userApi } from '../../api/user'
 
-const stats = ref({ totalUsers: 0, totalProducts: 0, totalOrders: 0, totalRevenue: 0 })
+const router = useRouter()
+
+const stats = ref({ totalUsers: 0, totalProducts: 0, totalOrders: 0, pendingProducts: 0 })
 const loading = ref(false)
+
+const cards = [
+  { key: 'totalUsers', label: '注册用户', icon: 'i-users', to: '/admin/users' },
+  { key: 'totalProducts', label: '平台商品', icon: 'i-box', to: '/admin/audit' },
+  { key: 'totalOrders', label: '累计订单', icon: 'i-receipt', to: '/admin/orders' },
+  { key: 'pendingProducts', label: '待审核商品', icon: 'i-list', to: '/admin/audit' }
+] as const
 
 async function loadStats() {
   loading.value = true
   try {
-    const [userRes, productRes, orderRes] = await Promise.all([
+    const [userRes, productRes, orderRes, pendingRes] = await Promise.all([
       userApi.listUsers(1, 1),
       productApi.list(1, 1),
-      orderApi.list(1, 1)
+      orderApi.list(1, 1),
+      productApi.getPending(1, 1).catch(() => null)
     ])
     stats.value.totalUsers = userRes.data.data?.total || 0
     stats.value.totalProducts = productRes.data.data?.total || 0
     stats.value.totalOrders = orderRes.data.data?.total || 0
+    stats.value.pendingProducts = pendingRes?.data?.data?.total || 0
   } finally {
     loading.value = false
   }
 }
 
+const monitors = [
+  { name: 'Grafana 监控', url: 'http://localhost:3001' },
+  { name: 'Prometheus', url: 'http://localhost:9090' },
+  { name: 'Jaeger 链路追踪', url: 'http://localhost:16686' },
+  { name: 'Sentinel 控制台', url: 'http://localhost:8858' }
+]
+
 onMounted(loadStats)
 </script>
 
 <template>
-  <div class="dashboard" v-loading="loading">
-    <h2>管理后台</h2>
-    <el-row :gutter="20" style="margin-top:20px">
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-label">用户总数</div>
-          <div class="stat-value">{{ stats.totalUsers }}</div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-label">商品总数</div>
-          <div class="stat-value">{{ stats.totalProducts }}</div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-label">订单总数</div>
-          <div class="stat-value">{{ stats.totalOrders }}</div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-label">平台收入</div>
-          <div class="stat-value">&yen;{{ stats.totalRevenue }}</div>
-        </el-card>
-      </el-col>
-    </el-row>
+  <div v-loading="loading" class="dashboard fade-up">
+    <div class="page-head">
+      <div>
+        <h1>数据概览</h1>
+        <p class="sub">平台核心指标与治理入口</p>
+      </div>
+      <button class="btn btn-ghost" @click="loadStats">
+        <svg class="icon-sm" aria-hidden="true"><use href="#i-refresh" /></svg>
+        刷新数据
+      </button>
+    </div>
 
-    <el-row :gutter="20" style="margin-top:20px">
-      <el-col :span="12">
-        <el-card>
-          <h3>快捷操作</h3>
-          <div class="quick-actions">
-            <el-button type="primary" @click="$router.push('/admin/audit')">商品审核</el-button>
-            <el-button type="success" @click="$router.push('/admin/users')">用户管理</el-button>
-            <el-button type="warning" @click="$router.push('/admin/orders')">订单管理</el-button>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="12">
-        <el-card>
-          <h3>系统信息</h3>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="Grafana 监控">
-              <a href="http://localhost:3000" target="_blank">http://localhost:3000</a>
-            </el-descriptions-item>
-            <el-descriptions-item label="Prometheus">
-              <a href="http://localhost:9090" target="_blank">http://localhost:9090</a>
-            </el-descriptions-item>
-            <el-descriptions-item label="Jaeger 链路追踪">
-              <a href="http://localhost:16686" target="_blank">http://localhost:16686</a>
-            </el-descriptions-item>
-            <el-descriptions-item label="Sentinel 控制台">
-              <a href="http://localhost:8858" target="_blank">http://localhost:8858</a>
-            </el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </el-col>
-    </el-row>
+    <div class="stat-grid">
+      <button v-for="c in cards" :key="c.key" class="stat-card" @click="router.push(c.to)">
+        <span class="stat-icon">
+          <svg class="icon" aria-hidden="true"><use :href="`#${c.icon}`" /></svg>
+        </span>
+        <span class="stat-body">
+          <b>{{ stats[c.key] }}</b>
+          <span>{{ c.label }}</span>
+        </span>
+      </button>
+    </div>
+
+    <div class="lower-grid">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>快捷操作</h2>
+        </div>
+        <div class="quick-actions">
+          <button class="btn btn-primary" @click="router.push('/admin/audit')">
+            <svg class="icon-sm" aria-hidden="true"><use href="#i-check" /></svg>
+            商品审核
+          </button>
+          <button class="btn btn-ghost" @click="router.push('/admin/users')">
+            <svg class="icon-sm" aria-hidden="true"><use href="#i-users" /></svg>
+            用户管理
+          </button>
+          <button class="btn btn-ghost" @click="router.push('/admin/orders')">
+            <svg class="icon-sm" aria-hidden="true"><use href="#i-receipt" /></svg>
+            订单管理
+          </button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>可观测性入口</h2>
+        </div>
+        <ul class="monitors">
+          <li v-for="m in monitors" :key="m.name">
+            <span>{{ m.name }}</span>
+            <a :href="m.url" target="_blank" rel="noopener">{{ m.url }}</a>
+          </li>
+        </ul>
+      </section>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.dashboard { max-width: 1200px; margin: 0 auto; }
-h2, h3 { margin: 0; }
-.stat-card { text-align: center; }
-.stat-label { color: #909399; font-size: 14px; margin-bottom: 8px; }
-.stat-value { font-size: 32px; font-weight: bold; color: #303133; }
-.quick-actions { display: flex; gap: 12px; margin-top: 12px; }
+/* ---------- 指标卡 ---------- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+  font-family: inherit;
+  transition: all var(--dur) var(--ease);
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--green-300);
+}
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--green-50);
+  color: var(--green-600);
+}
+.stat-body b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1.2;
+  color: var(--text);
+}
+.stat-body span {
+  font-size: var(--fs-xs);
+  color: var(--text-subtle);
+}
+
+/* ---------- 下半区 ---------- */
+.lower-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+.panel-head {
+  margin-bottom: var(--space-5);
+}
+.panel-head h2 {
+  font-size: var(--fs-h2);
+}
+.quick-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.monitors {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.monitors li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: var(--fs-sm);
+}
+.monitors li:last-child {
+  border-bottom: none;
+}
+.monitors a {
+  color: var(--green-600);
+  font-weight: 500;
+  font-size: var(--fs-xs);
+  word-break: break-all;
+}
+.monitors a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 1023px) {
+  .lower-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

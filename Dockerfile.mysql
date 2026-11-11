@@ -1,0 +1,9 @@
+# ============================================================
+# campus-mysql Dockerfile - 将初始化 SQL 烘焙进 MySQL 镜像
+# 生产 init.sql / init_admin.sql 来自 sql/ 目录，首次启动自动执行
+# 构建：docker build -f Dockerfile.mysql -t campus-mysql:latest .
+# ============================================================
+FROM mysql:8.0
+
+COPY sql/init.sql /docker-entrypoint-initdb.d/01-init.sql
+COPY sql/init_admin.sql /docker-entrypoint-initdb.d/02-init_admin.sql

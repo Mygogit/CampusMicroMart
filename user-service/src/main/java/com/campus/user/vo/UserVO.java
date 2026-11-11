@@ -16,5 +16,6 @@ public class UserVO {
     private String role;
     private Integer creditScore;
     private java.math.BigDecimal deposit;
+    private java.math.BigDecimal frozenDeposit;
     private LocalDateTime createTime;
 }

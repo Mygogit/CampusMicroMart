@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { productApi } from '../../api/product'
 
 const products = ref<any[]>([])
@@ -65,55 +65,74 @@ onMounted(loadPending)
 </script>
 
 <template>
-  <div>
-    <h2>商品审核</h2>
+  <div class="audit-page fade-up">
+    <div class="page-head">
+      <div>
+        <h1>商品审核</h1>
+        <p class="sub">共 {{ total }} 件待审核商品 · 通过后即时上架集市</p>
+      </div>
+      <button class="btn btn-ghost" @click="loadPending">
+        <svg class="icon-sm" aria-hidden="true"><use href="#i-refresh" /></svg>
+        刷新列表
+      </button>
+    </div>
 
-    <el-table v-loading="loading" :data="products" stripe>
-      <el-table-column prop="id" label="ID" width="60" />
-      <el-table-column prop="name" label="商品名称" min-width="150" />
-      <el-table-column prop="price" label="价格" width="100">
-        <template #default="{ row }">&yen;{{ row.price }}</template>
-      </el-table-column>
-      <el-table-column prop="stock" label="库存" width="70" />
-      <el-table-column label="课程代码" width="120">
-        <template #default="{ row }">{{ row.courseCode || '-' }}</template>
-      </el-table-column>
-      <el-table-column label="宿舍" width="100">
-        <template #default="{ row }">{{ row.dormitory || '-' }}</template>
-      </el-table-column>
-      <el-table-column prop="description" label="描述" min-width="150" show-overflow-tooltip />
-      <el-table-column label="操作" width="180">
-        <template #default="{ row }">
-          <el-button size="small" type="success" @click="showApprove(row.id)">通过</el-button>
-          <el-button size="small" type="danger" @click="showReject(row.id)">拒绝</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <div v-loading="loading" class="table-wrap">
+      <el-table v-if="products.length > 0" :data="products" stripe>
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="name" label="商品名称" min-width="180" show-overflow-tooltip />
+        <el-table-column label="价格" width="100">
+          <template #default="{ row }">
+            <span class="t-price">¥{{ row.price }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="stock" label="库存" width="80" />
+        <el-table-column label="课程代码" width="120">
+          <template #default="{ row }">{{ row.courseCode || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="宿舍" width="120">
+          <template #default="{ row }">{{ row.dormitory || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="description" label="描述" min-width="160" show-overflow-tooltip />
+        <el-table-column label="操作" width="170" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" type="success" @click="showApprove(row.id)">通过</el-button>
+            <el-button size="small" type="danger" @click="showReject(row.id)">拒绝</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <div v-if="products.length === 0 && !loading" class="empty">暂无待审核商品</div>
+      <div v-else-if="!loading" class="empty-state">
+        <div class="art"><svg class="ic"><use href="#i-check" /></svg></div>
+        <h3>没有待审核商品</h3>
+        <p>所有提交都已处理完毕，稍后再来看看</p>
+      </div>
+      <div v-else class="table-skeleton" />
+    </div>
 
-    <el-pagination
-      v-if="total > 10"
-      layout="prev, pager, next"
-      :total="total"
-      :page-size="10"
-      :current-page="page"
-      @current-change="onPageChange"
-      style="justify-content:center;margin-top:20px"
-    />
+    <div v-if="total > 10" class="pagination-wrapper">
+      <el-pagination
+        layout="prev, pager, next"
+        :total="total"
+        :page-size="10"
+        :current-page="page"
+        @current-change="onPageChange"
+      />
+    </div>
 
     <el-dialog
       v-model="reasonDialog"
       :title="currentAction === 'approve' ? '确认通过' : '拒绝原因'"
-      width="400px"
+      width="420px"
     >
       <el-input
         v-if="currentAction === 'reject'"
         v-model="reason"
         type="textarea"
-        placeholder="请输入拒绝原因"
+        :rows="3"
+        placeholder="请说明拒绝原因，将同步给卖家"
       />
-      <p v-else>确认通过该商品的审核？</p>
+      <p v-else>确认通过该商品的审核？通过后将立即上架集市。</p>
       <template #footer>
         <el-button @click="reasonDialog = false">取消</el-button>
         <el-button type="primary" @click="handleAudit">确认</el-button>
@@ -123,6 +142,25 @@ onMounted(loadPending)
 </template>
 
 <style scoped>
-h2 { margin-bottom: 20px; }
-.empty { text-align: center; color: #909399; padding: 60px 0; font-size: 16px; }
+.table-wrap {
+  min-height: 220px;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.table-skeleton {
+  height: 180px;
+}
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-6);
+}
+@media (max-width: 767px) {
+  .table-wrap {
+    padding: var(--space-3);
+  }
+}
 </style>

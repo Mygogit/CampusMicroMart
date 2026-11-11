@@ -33,11 +33,17 @@ spring:
         min-idle: 2
 
 jwt:
-  secret: Y2FtcHVzLW1pY3JvLW1hcnQtc2VjcmV0LWtleS0yMDI0LXNlY3VyZS1rZXktYmFzZTY0
+  secret: ${JWT_SECRET:Y2FtcHVzLW1pY3JvLW1hcnQtc2VjcmV0LWtleS0yMDI0LXNlY3VyZS1rZXktYmFzZTY0}
   expiration: 604800
 
 seata:
   enabled: false
+  client:
+    tm:
+      # TC 不可达时自动降级为本地事务，避免中间件缺失直接阻塞主流程
+      degrade-check: true
+      degrade-check-period: 2000
+      degrade-check-allow-times: 10
 
 mybatis-plus:
   configuration:
